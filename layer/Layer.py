@@ -10,7 +10,7 @@ class Layer(ABC):
         pass
 
     @abstractmethod
-    def update(self, Iter(completed)):
+    def update(self, iter(completed)):
         pass
 
     @abstractmethod

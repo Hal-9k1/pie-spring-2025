@@ -10,11 +10,9 @@ class AbstractFunctionLayer(Layer):
     
     def update(self, iter(completed)):
         if(emittedSubtask):
-            # Unsure how to translate the illegal state exception part to python.
-            raise IllegalStateException("Something")
+            raise ValueError("Illegal arguments")
         emittedTask = True
-        # Need to make a singleton somehow.
-        return iter(task)
+        return iter([task])
 
 class AbstractQueuedLayer(Layer):
     def __init__(self):
@@ -24,8 +22,10 @@ class AbstractQueuedLayer(Layer):
         pass
 
     def isTaskDone(self):
-        # unsure how to get hasNext() for iterator. 
-        return subtaskIter == None
+        if(subtask.next() == None):
+            return True
+        else:
+            return False
 
     def update(self, iter(completed)):
         # placeholder
