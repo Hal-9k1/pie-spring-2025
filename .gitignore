@@ -1,0 +1,8 @@
+# Generated dependencies
+Makefile.depends
+
+# Preprocessed files
+*build.py
+
+# Generated cache files
+__pycache__/
