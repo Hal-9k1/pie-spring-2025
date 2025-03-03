@@ -19,6 +19,20 @@ class AbstractFunctionLayer(Layer):
         # Need to make a singleton somehow.
         return iter(task)
 
+class AbstractQueuedLayer(Layer):
+    iter(subtaskIter)
+    def __init__():
+        subtaskIter = None
+
+    def setup(setupInfo):
+        pass
+
+    def isTaskDone():
+        return subtaskIter == None or next(subtaskIter) == None
+
+    def update(Iter(completed)):
+        # placeholder
+        pass
 
             
 
