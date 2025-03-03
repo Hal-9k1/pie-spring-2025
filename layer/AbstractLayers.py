@@ -1,9 +1,6 @@
 import Layer
 
 class AbstractFunctionLayer(Layer):
-    emittedSubtask
-    subtask
-
     def __init__(self):
         self.emittedSubtask = True
         self.subtask = None
@@ -20,7 +17,6 @@ class AbstractFunctionLayer(Layer):
         return iter(task)
 
 class AbstractQueuedLayer(Layer):
-    iter(subtaskIter)
     def __init__(self):
         subtaskIter = None
 
@@ -28,10 +24,10 @@ class AbstractQueuedLayer(Layer):
         pass
 
     def isTaskDone(self):
-        # unsure how to get hasNext() for iterator.
+        # unsure how to get hasNext() for iterator. 
         return subtaskIter == None
 
-    def update(self, ter(completed)):
+    def update(self, iter(completed)):
         # placeholder
         pass
 
