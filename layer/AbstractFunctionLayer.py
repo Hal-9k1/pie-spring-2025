@@ -1,3 +1,5 @@
+import Layer
+
 class AbstractFunctionLayer(Layer):
     emittedSubtask
     subtask
@@ -12,8 +14,11 @@ class AbstractFunctionLayer(Layer):
     def update(iter(completed)):
         if(emittedSubtask):
             # Unsure how to translate the illegal state exception part to python.
-            raise Exception("Illegal state exception")
+            raise IllegalStateException("Something")
         emittedTask = True
-        # return 
+        # Need to make a singleton somehow.
+        return iter(task)
+
+
             
 
