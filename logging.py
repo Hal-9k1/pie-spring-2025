@@ -10,11 +10,11 @@ class Log:
     def get_message(self):
         return self._msg
 
-    def write_to(self, stream):
-        ioutil.write_flexible_string(stream, self._severity)
-        ioutil.write_flexible_string(stream, self._label)
-        ioutil.write_flexible_string(stream, self._location)
-        ioutil.write_flexible_string(stream, self._msg)
+    def write_to(self, buffer):
+        ioutil.write_flexible_string(buffer, self._severity)
+        ioutil.write_flexible_string(buffer, self._label)
+        ioutil.write_flexible_string(buffer, self._location)
+        ioutil.write_flexible_string(buffer, self._msg)
 
 
 class Logger:
