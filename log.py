@@ -73,8 +73,8 @@ class Logger:
         timestamp = ""
         if self._report_timestamps_filter.permit(timestamp):
             timestamp = datetime.now().strftime("%H:%M:%S.%f")
-        msg = f"[{timestamp} {severity} {label}{location}] {"".join(args)}"
-        self._backend.process_log(Log(severity, label, location, msg)
+        msg = f"[{timestamp} {severity} {label}{location}] {''.join(args)}"
+        self._backend.process_log(Log(severity, label, location, msg))
 
 
 class LoggerBackend(ABC):
