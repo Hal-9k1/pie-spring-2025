@@ -21,15 +21,15 @@ class TopLayerSequence(Layer):
         name = []
 
         for elem in layers:
-            name.append(cls(elem))
+            name.append(elem.__class__)
             elem.setup(setupInfo)
         
-        logger = setupInfo.getLogger(name)
+        logger = setupInfo.getLogger(f'TopLayerSequence[{name.join(", ")}]')
 
         self.layerIter = iter(layers)
         layer = next(self.layerIter)
 
-    def update(self, iter(completed)):
+    def update(self, completed):
         subtasks = layer.update(iter(completed))
         if(layer.isTaskDone() and hasNext(layerIter):
             layer = layerIter.next()

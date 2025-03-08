@@ -1,35 +1,37 @@
-import Layer
+from layer import Layer
 
 class AbstractFunctionLayer(Layer):
     def __init__(self):
-        self.emittedSubtask = True
-        self.subtask = None
+        self._emitted_subtask = True
+        self._subtask = None
 
-    def isTaskDone(self):
-        return emittedSubtask
-    
-    def update(self, iter(completed)):
-        if(emittedSubtask):
-            raise ValueError("Illegal arguments")
-        emittedTask = True
+    def is_task_done(self):
+        return self._emitted_subtask
+
+    def update(self, completed):
+        if self._emitted_subtask:
+            raise RuntimeError("No more subtasks!")
+        self._emitted_subtask = True
         return iter([task])
 
 class AbstractQueuedLayer(Layer):
     def __init__(self):
-        subtaskIter = None
+        self._subtask_iter = None
+        self._next_subtask = None
 
-    def setup(self, setupInfo):
+    def setup(self, setup_info):
         pass
 
-    def isTaskDone(self):
-        if(subtask.next() == None):
-            return True
-        else:
-            return False
+    def is_task_done(self):
+        return self._get_next_subtask() == None
 
-    def update(self, iter(completed)):
-        # placeholder
-        pass
+    def update(self, completed):
+        subtask = self._get_next_subtask()
+        self._next_subtask = None
+        return subtask
 
-            
+    def _get_next_subtask(self):
+        if self._next_subtask == None:
+            self._next_subtask = next(self._subtask_iter, None)
+        return self._next_subtask
 

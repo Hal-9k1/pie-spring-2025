@@ -1,4 +1,5 @@
 from abc import ABC
+from abc import abstractmethod
 
 class Layer(ABC):
     @abstractmethod
@@ -10,7 +11,7 @@ class Layer(ABC):
         pass
 
     @abstractmethod
-    def update(self, iter(completed)):
+    def update(self, completed):
         pass
 
     @abstractmethod
