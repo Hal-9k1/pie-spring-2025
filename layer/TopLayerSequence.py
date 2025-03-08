@@ -1,3 +1,5 @@
+from layer import Layer
+
 class TopLayerSequence(Layer):
     def __init__(self, layers):
         # Is a list
