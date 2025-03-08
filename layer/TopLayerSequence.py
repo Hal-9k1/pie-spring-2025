@@ -3,43 +3,43 @@ from layer import Layer
 class TopLayerSequence(Layer):
     def __init__(self, layers):
         # Is a list
-        self.layers = layers
+        self._layers = layers
 
         # is a iterator
-        self.layerIter = None
+        self._layer_iter = None
 
         # Top level layer being operated on.
-        self.layer = None
+        self._layer = None
 
-        self.logger = None
+        self._logger = None
 
-    def isTaskDone(self):
-        if hasNext(layerIter) and layer.isTaskDone():
+    def is_task_done(self):
+        if has_next(self._layer_iter) and self._layer.is_task_done():
             return True
         else:
             return False
 
-    def setup(self, setupInfo):
+    def setup(self, setup_info):
         name = []
 
-        for elem in layers:
+        for elem in self._layers:
             name.append(elem.__class__)
             elem.setup(setupInfo)
         
-        logger = setupInfo.getLogger(f'TopLayerSequence[{name.join(", ")}]')
+        self._logger = setup_info.get_logger(f'TopLayerSequence[{name.join(", ")}]')
 
-        self.layerIter = iter(layers)
-        layer = next(self.layerIter)
+        self._layer_iter = iter(self._layers)
+        layer = next(self._layer_iter)
 
     def update(self, completed):
-        subtasks = layer.update(iter(completed))
-        if(layer.isTaskDone() and hasNext(layerIter):
-            layer = layerIter.next()
+        subtasks = self._layer.update(iter(completed))
+        if(self._layer.is_task_done() and has_next(self._layer_iter):
+            self._layer = self._layer_iter.next()
 
         return subtasks
 
 
-    def hasNext(layerIter):
+    def has_next(self, layerIter):
         if layerIter.next() == None:
             return False
         else:

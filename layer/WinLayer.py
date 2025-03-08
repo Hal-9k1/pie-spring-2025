@@ -1,13 +1,15 @@
+from Task import Task
+
 class WinLayer(Task):
     def __init__(self):
-        self.emittedWin = False
+        self._emittedWin = False
 
     def setup(self, setupInfo):
         pass
 
     def update(self, iter(completed)):
-        self.emittedWin = True
-        return iter([WinTask()])
+        self._emittedWin = True
+        return iter([WinTask()]
 
-    def acceptTask(self, Task):
+    def accept_task(self, Task):
         raise ValueError(Task)
