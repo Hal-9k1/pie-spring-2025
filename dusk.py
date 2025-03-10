@@ -2,8 +2,9 @@ from collections import deque
 from ioutil import write_double
 from ioutil import write_flexible_string
 from log import LoggerBackend
-from multiprocessing import Event
-from multiprocessing import Process
+from threading import Event
+from threading import Lock
+from threading import Thread
 from socket import socket
 
 class DuskClient(LoggerBackend):
@@ -21,11 +22,12 @@ class DuskClient(LoggerBackend):
         self._network_thread = None
         self._stop_event = Event()
         self._packet_queued_event = Event()
+        self._packet_queued_event_lock = Lock()
 
     def start(self):
         if self._network_thread != None:
             raise RuntimeError("DuskClient already started")
-        self._network_thread = Process(target=_connect_loop, args=(self,))
+        self._network_thread = Thread(target=self._connect_loop)
         self._stop_event.clear()
         self._packet_queued_event.clear()
         self._network_thread.start()
@@ -38,7 +40,7 @@ class DuskClient(LoggerBackend):
         self._network_thread.join()
 
     def process_position(self, logger_label, item_label, position):
-        packet = bytearray(_TYPE_POS)
+        packet = bytearray(self._TYPE_POS)
         write_flexible_string(packet, logger_label)
         write_flexible_string(packet, item_label)
         write_double(packet, position.get_x())
@@ -46,7 +48,7 @@ class DuskClient(LoggerBackend):
         self._queue_packet(packet)
 
     def process_vector(self, logger_label, item_label, attach_label, vector):
-        packet = bytearray(_TYPE_VEC)
+        packet = bytearray(self._TYPE_VEC)
         write_flexible_string(packet, logger_label)
         write_flexible_string(packet, item_label)
         write_flexible_string(packet, attach_label)
@@ -55,7 +57,7 @@ class DuskClient(LoggerBackend):
         self._queue_packet(packet)
 
     def process_transform(self, logger_label, item_label, attach_label, transform):
-        packet = bytearray(_TYPE_TFM)
+        packet = bytearray(self._TYPE_TFM)
         write_flexible_string(packet, logger_label)
         write_flexible_string(packet, item_label)
         write_flexible_string(packet, attach_label)
@@ -68,40 +70,51 @@ class DuskClient(LoggerBackend):
         self._queue_packet(packet)
 
     def process_updatable_object(self, logger_label, item_label, value):
-        packet = bytearray(_TYPE_UPD)
+        packet = bytearray(self._TYPE_UPD)
         write_flexible_string(packet, logger_label)
         write_flexible_string(packet, item_label)
         write_flexible_string(packet, repr(value))
         self._queue_packet(packet)
 
     def process_log(self, log):
-        packet = bytearray(_TYPE_LOG)
+        packet = bytearray(self._TYPE_LOG)
         log.write_to(packet)
         self._queue_packet(packet)
 
     def _connect(self):
         self._socket = socket()
-        self._socket.connect((self._hostname, self._port))
+        try:
+            self._socket.connect((self._hostname, self._port))
+        except OSError:
+            pass
 
     def _connect_loop(self):
-        while not self._stop_event.is_set():
-            self._connect()
-            self._packet_pump_loop()
-            self._stop_event.wait(self._reconnect_timeout)
+        try:
+            while not self._stop_event.is_set():
+                self._connect()
+                self._packet_pump_loop()
+                self._stop_event.wait(self._reconnect_timeout)
+        finally:
+            self._socket.close()
 
     def _packet_pump_loop(self):
         while not self._stop_event.is_set():
+            if self._packet_queued_event.is_set():
+                assert(self._packet_queue)
             if not self._packet_queue:
                 self._packet_queued_event.wait()
-                self._packet_queued_event.clear()
+                assert(self._packet_queue)
                 if self._stop_event.is_set():
                     break
-            packet = self._packet_queue.popleft()
+            with self._packet_queued_event_lock:
+                packet = self._packet_queue.popleft()
+                self._packet_queued_event.clear()
             try:
                 self._socket.sendall(packet)
             except OSError:
                 self._packet_queue.appendleft(packet)
 
-    def _queue_packet(self):
-        self._packet_queue.append(self)
-        self._packet_queued_event.set()
+    def _queue_packet(self, packet):
+        with self._packet_queued_event_lock:
+            self._packet_queue.append(packet)
+            self._packet_queued_event.set()

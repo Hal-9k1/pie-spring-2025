@@ -1,4 +1,7 @@
 from abc import *
+from inspect import currentframe
+from datetime import datetime
+from ioutil import write_flexible_string
 
 class Log:
     def __init__(self, severity, label, location, msg):
@@ -11,10 +14,10 @@ class Log:
         return self._msg
 
     def write_to(self, buffer):
-        ioutil.write_flexible_string(buffer, self._severity)
-        ioutil.write_flexible_string(buffer, self._label)
-        ioutil.write_flexible_string(buffer, self._location)
-        ioutil.write_flexible_string(buffer, self._msg)
+        write_flexible_string(buffer, self._severity)
+        write_flexible_string(buffer, self._label)
+        write_flexible_string(buffer, self._location)
+        write_flexible_string(buffer, self._msg)
 
 
 class Logger:
@@ -48,7 +51,7 @@ class Logger:
         self._do_log(True, severity, args)
 
     def log(self, *args):
-        self._do_log(False, default_severity, args)
+        self._do_log(False, self._default_severity, args)
 
     def position(self, item_label, position):
         self._backend.process_position(label, item_label, position)
@@ -68,13 +71,19 @@ class Logger:
                 + " default severity only")
         location = ""
         if self._report_locations_filter.permit(severity):
-            file, num = _HELPER_translate_line_no(traceback.walk_stack(traceback.walk_stack()).f_lineno)
+            frame = currentframe().f_back.f_back
+            file = frame.f_code.co_filename
+            num = frame.f_lineno
+            try:
+                file, num = _HELPER_translate_line_no(frame.f_lineno)
+            except NameError:
+                pass
             location = f" {file}:{num}"
         timestamp = ""
         if self._report_timestamps_filter.permit(timestamp):
             timestamp = datetime.now().strftime("%H:%M:%S.%f")
-        msg = f"[{timestamp} {severity} {label}{location}] {''.join(args)}"
-        self._backend.process_log(Log(severity, label, location, msg))
+        msg = f"[{timestamp} {severity} {self._label}{location}] {''.join(args)}"
+        self._backend.process_log(Log(severity, self._label, location, msg))
 
 
 class LoggerBackend(ABC):
@@ -128,15 +137,15 @@ class LoggerProvider:
         else:
             backend = _AggregateBackend(self._backends.copy())
         return Logger(
-            self._label,
+            label,
             backend,
             self._default_severity_name,
             self._default_severity_only,
-            SeverityFilter(
+            _SeverityFilter(
                 self._use_location,
                 self._location_exceptions.copy()
             ),
-            SeverityFilter(
+            _SeverityFilter(
                 self._use_timestamp,
                 self._timestamp_exceptions.copy()
             )
