@@ -1,13 +1,14 @@
+from dusk import DuskClient
+from log import LoggerProvider
+from queue import Empty
+from queue import Queue
+from socket import SHUT_RDWR
+from socket import create_server
+from socket import timeout as SocketTimeoutError
 from threading import Event
 from threading import Lock
 from threading import Thread
-from queue import Queue
 from unittest import TestCase
-from dusk import DuskClient
-from log import LoggerProvider
-from socket import create_server
-from socket import timeout as SocketTimeoutError
-from socket import SHUT_RDWR
 
 class TestDusk(TestCase):
     def setUp(self):
@@ -63,16 +64,22 @@ class TestDusk(TestCase):
         print("connected")
         while self._server_process:
             try:
-                if not self._packet_asserts:
+                try:
+                    with self._packet_assert_added_event_lock:
+                        print("Getting assert (should not block)")
+                        packet_assert = self._packet_asserts.get(block=False)
+                        self._packet_assert_added_event.clear()
+                except Empty:
                     print("Waiting for assert")
+                    print(f"because {self._packet_assert_added_event.is_set()}")
                     self._packet_assert_added_event.wait()
                     print("Assert added")
                     if not self._server_process:
                         return
-                with self._packet_assert_added_event_lock:
-                    print("Getting assert (should not block)")
-                    packet_assert = self._packet_asserts.get()
-                    self._packet_assert_added_event.clear()
+                    with self._packet_assert_added_event_lock:
+                        print("Getting assert (should not block)")
+                        packet_assert = self._packet_asserts.get()
+                        self._packet_assert_added_event.clear()
                 print("recv assert")
                 to_recv = packet_assert.get_size()
                 buf = bytearray()
@@ -87,6 +94,7 @@ class TestDusk(TestCase):
                     return
                 packet_assert.check_content(buf)
                 packet_assert.complete()
+                print("Assert complete")
             except Exception as e:
                 packet_assert.error(e)
 
@@ -95,6 +103,7 @@ class TestDusk(TestCase):
         with self._packet_assert_added_event_lock:
             self._packet_asserts.put(assertion)
             self._packet_assert_added_event.set()
+        print(f"assert queued {self._packet_assert_added_event.is_set()}")
         err = assertion.wait_for_completion()
         if err:
             raise err
