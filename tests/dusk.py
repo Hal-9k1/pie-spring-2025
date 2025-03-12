@@ -17,20 +17,17 @@ class TestDusk(TestCase):
         provider.add_backend(self._client)
         self._logger = provider.get_logger("Main")
         self._packet_asserts = Queue()
-        self._server_process = Thread(target=self._run_server)
+        self._server_process = Thread(target=(lambda: self._run_server()))
         self._server_process.start()
         self._packet_assert_added_event = Event()
         self._packet_assert_added_event_lock = Lock()
 
     def tearDown(self):
-        try:
-            self._client.stop()
-            proc = self._server_process
-            self._server_process = None
-            self._packet_assert_added_event.set()
-            proc.join()
-        except:
-            pass
+        self._client.stop()
+        proc = self._server_process
+        self._server_process = None
+        self._packet_assert_added_event.set()
+        proc.join()
 
     def _run_server(self):
         try:
@@ -44,13 +41,13 @@ class TestDusk(TestCase):
             self._dummy_server.settimeout(0.1)
             while self._server_process:
                 try:
-                    cxn = self._dummy_server.accept()
+                    cxn = self._dummy_server.accept()[0]
                     try:
                         self._handle_connection(cxn)
-                        print("connection closed")
                     finally:
                         if cxn:
-                            while cxn.recv():
+                            # Arbitrary buffer size, just trying to drain the connection
+                            while cxn.recv(1024):
                                 pass
                             cxn.close()
                 except SocketTimeoutError:
@@ -61,26 +58,19 @@ class TestDusk(TestCase):
                 self._dummy_server.close()
 
     def _handle_connection(self, cxn):
-        print("connected")
         while self._server_process:
             try:
                 try:
                     with self._packet_assert_added_event_lock:
-                        print("Getting assert (should not block)")
                         packet_assert = self._packet_asserts.get(block=False)
                         self._packet_assert_added_event.clear()
                 except Empty:
-                    print("Waiting for assert")
-                    print(f"because {self._packet_assert_added_event.is_set()}")
                     self._packet_assert_added_event.wait()
-                    print("Assert added")
                     if not self._server_process:
                         return
                     with self._packet_assert_added_event_lock:
-                        print("Getting assert (should not block)")
                         packet_assert = self._packet_asserts.get()
                         self._packet_assert_added_event.clear()
-                print("recv assert")
                 to_recv = packet_assert.get_size()
                 buf = bytearray()
                 while to_recv and self._server_process:
@@ -89,12 +79,10 @@ class TestDusk(TestCase):
                         raise EOFError("Client closed socket!")
                     buf += recvd
                     to_recv -= len(recvd)
-                    print(f"received {len(recvd)} bytes over socket")
                 if not self._server_process:
                     return
                 packet_assert.check_content(buf)
                 packet_assert.complete()
-                print("Assert complete")
             except Exception as e:
                 packet_assert.error(e)
 
@@ -103,7 +91,6 @@ class TestDusk(TestCase):
         with self._packet_assert_added_event_lock:
             self._packet_asserts.put(assertion)
             self._packet_assert_added_event.set()
-        print(f"assert queued {self._packet_assert_added_event.is_set()}")
         err = assertion.wait_for_completion()
         if err:
             raise err
@@ -114,11 +101,10 @@ class TestDusk(TestCase):
     def test_log(self):
         self._client.start()
         self._logger.log("Hello!")
-        self._queue_packet_assert(b'\x05\x04INFO\x04Main\x00\x06Hello!')
+        self._queue_packet_assert(b'\x05\x04INFO\x04Main\x00\x12[INFO Main] Hello!')
 
 class PacketAssert:
     def __init__(self, expected_content, assert_eq_cb):
-        print("created assert")
         self._size = len(expected_content)
         self._expected_content = expected_content
         self._assert_eq_cb = assert_eq_cb
@@ -126,9 +112,7 @@ class PacketAssert:
         self._error = None
 
     def complete(self):
-        print("assert completed")
         import traceback
-        traceback.print_stack()
         self._completed_event.set()
 
     def error(self, error):

@@ -36,7 +36,7 @@ class DuskClient(LoggerBackend):
         if self._network_thread == None:
             raise RuntimeError("DuskClient not started")
         self._stop_event.set()
-        self._packet_added_event.set()
+        self._packet_queued_event.set()
         self._network_thread.join()
 
     def process_position(self, logger_label, item_label, position):
@@ -83,15 +83,18 @@ class DuskClient(LoggerBackend):
 
     def _connect(self):
         self._socket = socket()
+        self._socket.settimeout(0.1)
         try:
             self._socket.connect((self._hostname, self._port))
         except OSError:
-            pass
+            self._socket = None
 
     def _connect_loop(self):
         try:
             while not self._stop_event.is_set():
                 self._connect()
+                if not self._socket:
+                    continue
                 self._packet_pump_loop()
                 self._stop_event.wait(self._reconnect_timeout)
         finally:
@@ -99,11 +102,8 @@ class DuskClient(LoggerBackend):
 
     def _packet_pump_loop(self):
         while not self._stop_event.is_set():
-            if self._packet_queued_event.is_set():
-                assert(self._packet_queue)
             if not self._packet_queue:
                 self._packet_queued_event.wait()
-                assert(self._packet_queue)
                 if self._stop_event.is_set():
                     break
             with self._packet_queued_event_lock:
