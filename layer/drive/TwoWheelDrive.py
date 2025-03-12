@@ -4,7 +4,7 @@ from mechanisms import Wheel
 from task import AxialMovementTask, TankDriveTask, TurnTask, UnsupportedTaskError
 from units import convert
 from math import copysign
-from LayerSetupInfo import *
+from layer import LayerSetupInfo
 
 
 class TwoWheelDrive(Layer):
@@ -27,10 +27,10 @@ class TwoWheelDrive(Layer):
         self.current_task_done = True
 
     def setup(self, init_info):
-        self.right_wheel = Motor(setup_info.get_robot(), setup_info.get_logger_provider(), self.RIGHT_DRIVE_MOTOR_NAME,
-                                'insert a or b here')
-        self.left_wheel = Motor(setup_info.get_robot(), setup_info.get_logger_provider(), self.LEFT_DRIVE_MOTOR_NAME,
-                                'insert a or b here')
+        self.right_wheel = Motor(setup_info.get_robot(), setup_info.get_logger_provider(),
+            self.RIGHT_DRIVE_MOTOR_NAME, 'insert a or b here')
+        self.left_wheel = Motor(setup_info.get_robot(), setup_info.get_logger_provider(),
+            self.LEFT_DRIVE_MOTOR_NAME, 'insert a or b here')
         self.left_start_pos = 0
         self.right_start_pos = 0
         self.left_goal_delta = 0
@@ -42,9 +42,11 @@ class TwoWheelDrive(Layer):
 
     def update(self, completed):
         left_delta = self.left_wheel.get_distance() - self.left_start_pos
-        left_done = (left_delta < 0) == (self.left_goal_delta < 0) and abs(left_delta) >= abs(self.left_goal_delta)
+        left_done = ((left_delta < 0) == (self.left_goal_delta < 0)
+            and abs(left_delta) >= abs(self.left_goal_delta))
         right_delta = self.right_wheel.get_distance() - self.right_start_pos
-        right_done = (right_delta < 0) == (self.right_goal_delta < 0) and abs(right_delta) >= abs(self.right_goal_delta)
+        right_done = ((right_delta < 0) == (self.right_goal_delta < 0)
+            and abs(right_delta) >= abs(self.right_goal_delta))
 
         is_teleop_task = self.left_goal_delta == 0 and self.right_goal_delta == 0
         self.current_task_done = left_done and right_done
@@ -60,8 +62,10 @@ class TwoWheelDrive(Layer):
             self.left_goal_delta = task.distance * self.GEAR_RATIO * self.SLIPPING_CONSTANT
             self.right_goal_delta = task.distance * self.GEAR_RATIO * self.SLIPPING_CONSTANT
         elif isinstance(task, TurnTask):
-            self.left_goal_delta = -task.angle * self.WHEEL_SPAN_RADIUS * self.GEAR_RATIO * self.SLIPPING_CONSTANT
-            self.right_goal_delta = task.angle * self.WHEEL_SPAN_RADIUS * self.GEAR_RATIO * self.SLIPPING_CONSTANT
+            self.left_goal_delta = (-task.angle * self.WHEEL_SPAN_RADIUS * self.GEAR_RATIO
+                * self.SLIPPING_CONSTANT)
+            self.right_goal_delta = (task.angle * self.WHEEL_SPAN_RADIUS * self.GEAR_RATIO
+                * self.SLIPPING_CONSTANT)
         elif isinstance(task, TankDriveTask):
             self.left_goal_delta = 0
             self.right_goal_delta = 0
