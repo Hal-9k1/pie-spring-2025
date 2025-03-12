@@ -33,7 +33,7 @@ class TopLayerSequence(Layer):
 
     def update(self, completed):
         subtasks = self._layer.update(iter(completed))
-        if(self._layer.is_task_done() and has_next(self._layer_iter):
+        if(self._layer.is_task_done() and has_next(self._layer_iter)):
             self._layer = self._layer_iter.next()
 
         return subtasks
