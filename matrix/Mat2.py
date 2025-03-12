@@ -40,7 +40,7 @@ class Mat2:
             -self._mat[1] / d,
             self._mat[0] / d
         )
-    
+
     def is_finite(self):
         return all(isfinite(e) for e in self._mat)
 
