@@ -57,7 +57,7 @@ class Mat3:
          return self._mat[0] * self._mat[4] * self._mat[8] + self._mat[1] * self._mat[5] * self._mat[6] + self._mat[2] * self._mat[3] * self._mat[7] - self._mat[2] * self._mat[4] * self._mat[6] - self._mat[0] * self._mat[5] * self._mat[7] - self._mat[1] * self._mat[3] * self._mat[8]
     
     def inv(self):
-         return self.cofactor().transpose().mul(1 / det())
+         return self.cofactor().transpose().mul(1 / self.det())
     
     def col(self, num):
         self.checkDim(num, True)
