@@ -27,8 +27,10 @@ def get_robot_interfaces(use_input):
 
     return (robot, gamepad, keyboard)
 
+@_PREP_ENTRY_POINT
 def autonomous():
     auto_opmode.run(*get_robot_interfaces(False))
 
+@_PREP_ENTRY_POINT
 def teleop():
     teleop_opmode.run(*get_robot_interfaces(True))
