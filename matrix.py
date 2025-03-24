@@ -118,14 +118,13 @@ class Mat3:
     def minor(self, col, row):
         self._check_dim(row, False)
         self._check_dim(col, True)
-        col0 = 1 if col == 0 else 0;
-        col1 = col0 + (2 if col == 1 else 1);
-        row0 = 1 if row == 0 else 0;
-        row1 = row0 + (2 if row == 1 else 1);
-        return new Mat2(
+        col0 = 1 if col == 0 else 0
+        col1 = col0 + (2 if col == 1 else 1)
+        row0 = 1 if row == 0 else 0
+        row1 = row0 + (2 if row == 1 else 1)
+        return Mat2(
             elem(col0, row0), elem(col1, row0),
-            elem(col0, row1), elem(col1, row1)
-        );
+            elem(col0, row1), elem(col1, row1))
     
     def cofactor(self):
          return Mat3(
