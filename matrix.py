@@ -28,7 +28,7 @@ class Mat2:
                 self._mat[2] * other.getX() + self._mat[3] * other.get_y()
             )
         elif isinstance(other, Number):
-            return Mat2(*(e * other) for e in self._mat)
+            return Mat2((e * other) for e in self._mat)
         else:
             raise ValueError('Invalid multiplicand type.')
 
