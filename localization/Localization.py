@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
 from matrix import Vec2
+from functools import reduce
 import math
 
 class LocalizationData:
@@ -54,5 +55,23 @@ class AbstractFinDiffLocalization(LocalizationData):
                     return _product
         # What is the equiivalent of the reduce function in python?
         ignore_root_factor = list(map(calculations(b), ignore_roots))
-        return (get_position_probability(pos.add(Vec2(self._epsilon, 0))) - get_position_probability(pos)) / self._epsilon * ignore_root_factor
+        return (self.get_position_probability(pos.add(Vec2(self._epsilon, 0))) - self.get_position_probability(pos)) / self._epsilon * ignore_root_factor
+    
+    def get_position_probability_dy(self, pos, ignore_roots):
+        return (self.get_position_probability(pos.add(Vec2(0, self._epsilon))) - self.get_position_probability_dy(pos)) / self._epsilon
+    
+    def get_positional_probability_dx_gradient(self, pos, ignore_roots):
+        z = self.get_position_probability_dx(pos, ignore_roots)
+        wrtX = (self.get_position_probability_dx(pos.add(Vec2(self._epsilon, 0)), ignore_roots) - z) / self._epsilon
+        wrtY = (self.get_position_probability_dx(pos.add(Vec2(0, self._epsilon)), ignore_roots) - z) / self._epsilon
+        return Vec2(wrtX, wrtY)
 
+    def get_position_probability_dy_gradient(self, pos, ignore_roots):
+        z = self.get_position_probability_dy(pos, ignore_roots)
+        wrtX = (self.get_position_probability_dy(pos.add(Vec2(self._epsilon, 0)), ignore_roots) - z)
+        wrtY = (self.get_position_probability_dy(pos.add(Vec2(0, self._epsilon))) - z)
+        return Vec2(wrtX, wrtY)
+    
+    def get_rotation_probability_dx(self, rot, ignore_roots):
+        # placehoeder
+        pass
