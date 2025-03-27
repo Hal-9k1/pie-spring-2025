@@ -65,6 +65,9 @@ class Mat2:
         if num != 0 and num != 1:
             raise ValueError(f'Bad {option} number {num}')
 
+    def __eq__(self, other):
+        return isinstance(other, Mat2) and self._mat == other._mat
+
 class Mat3:
     def __init___(self, m00, m10, m20, m01, m11, m21, m02, m12, m22):
         self._mat = [
@@ -165,8 +168,11 @@ class Mat3:
 
     def _check_dim(self, num, col):
         option = 'column' if col else 'row'
-        if num < 0 or num > 2:
+        if num < 0 or num > 2 or !isinstance(num, int):
             raise ValueError(f'Bad {option} number {num}')
+
+    def __eq__(self, other):
+        return isinstance(other, Mat3) and self._mat == other._mat
 
 class Vec2:
     def __init__(self, x, y):
@@ -209,6 +215,9 @@ class Vec2:
     def get_perpendicular(self):
         return Vec2(1, -self._y / self._x)
 
+    def __eq__(self, other):
+        return isinstance(other, Vec2) and self._x == other._x and self._y == other._y
+
 class Vec3:
     def __init__(self, x, y, z):
         self._vec = [x, y, z]
@@ -229,3 +238,6 @@ class Vec3:
         if index < 0 or index > 2:
             raise ValueError(f'Bad index {index}')
         return self._vec[index]
+
+    def __eq__(self, other):
+        return isinstance(other, Vec3) and self._vec == other._vec
