@@ -3,7 +3,7 @@ from matrix import Vec2
 from functools import reduce
 import math
 
-class LocalizationData:
+class LocalizationData(ABC):
     @abstractmethod
     def get_position_probability(self, pos):
         pass
@@ -74,4 +74,39 @@ class AbstractFinDiffLocalization(LocalizationData):
     
     def get_rotation_probability_dx(self, rot, ignore_roots):
         # placehoeder
+        pass
+
+class LocalizationSource(ABC):
+    @abstractmethod
+    def canLocalizePosition():
+        pass
+
+    @abstractmethod
+    def canLocalizeRotation():
+        pass
+
+    @abstractmethod
+    def collectData():
+        pass
+
+
+class RobotLocalizer(ABC):
+    @abstractmethod
+    def invalidateCache():
+        pass
+
+    @abstractmethod
+    def registerSource(source):
+        pass
+
+    @abstractmethod
+    def resolveTransform():
+        pass
+
+    @abstractmethod
+    def resolvePosition():
+        pass
+
+    @abstractmethod
+    def resolveRotation():
         pass
