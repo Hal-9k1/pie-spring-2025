@@ -42,7 +42,7 @@ class AbstractFinDiffLocalization(LocalizationData):
         self._epsilon = epsilon
 
     def get_position_probability_dx(self, pos, ignore_roots):
-        def calculations(b):
+        def calculations():
             _negative_center = pos.mul(-1)
             _epsilon_vec = Vec2(self.epsilon, self.epsilon)
             while True:
@@ -54,7 +54,7 @@ class AbstractFinDiffLocalization(LocalizationData):
                 else:
                     return _product
         # What is the equiivalent of the reduce function in python?
-        ignore_root_factor = list(map(calculations(b), ignore_roots))
+        ignore_root_factor = list(reduce(calculations, ignore_roots))
         return (self.get_position_probability(pos.add(Vec2(self._epsilon, 0))) - self.get_position_probability(pos)) / self._epsilon * ignore_root_factor
     
     def get_position_probability_dy(self, pos, ignore_roots):
@@ -73,7 +73,7 @@ class AbstractFinDiffLocalization(LocalizationData):
         return Vec2(wrtX, wrtY)
     
     def get_rotation_probability_dx(self, rot, ignore_roots):
-        # placehoeder
+        # placeholder
         pass
 
 class LocalizationSource(ABC):
@@ -110,3 +110,20 @@ class RobotLocalizer(ABC):
     @abstractmethod
     def resolveRotation():
         pass
+
+    class SqFalloffLocalizationData(AbstractFinDiffLocalization):
+        def __init__(self, _epsilon, transform, accuracy, _position_precision, _rotation_precision):
+            super().__init__(_epsilon)
+            self._transform = transform
+            self._accuracy = accuracy
+            self._position_precision = _position_precision
+            self._rotation_precision = _rotation_precision
+
+        def get_position_probability(self, pos):
+            diff = self._transform.get_translation().mul(-1).add(pos)
+            return self._accuracy / ((diff.dot(diff) * self._position_precision) + 1)
+
+        def get_rotation_probability(self, rot):
+            diff = rot - self._transform.get_direction().get_angle()
+            return self._accuracy / (diff * diff * self._rotation_precision + 1)
+
