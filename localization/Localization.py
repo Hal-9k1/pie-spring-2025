@@ -42,7 +42,7 @@ class AbstractFinDiffLocalization(LocalizationData):
         self._epsilon = epsilon
 
     def get_position_probability_dx(self, pos, ignore_roots):
-        def calculations():
+        def calculations(b):
             _negative_center = pos.mul(-1)
             _epsilon_vec = Vec2(self.epsilon, self.epsilon)
             while True:
@@ -54,7 +54,7 @@ class AbstractFinDiffLocalization(LocalizationData):
                 else:
                     return _product
         # What is the equiivalent of the reduce function in python?
-        ignore_root_factor = list(reduce(calculations, ignore_roots))
+        ignore_root_factor = list(reduce(calculations(1.0), ignore_roots))
         return (self.get_position_probability(pos.add(Vec2(self._epsilon, 0))) - self.get_position_probability(pos)) / self._epsilon * ignore_root_factor
     
     def get_position_probability_dy(self, pos, ignore_roots):
@@ -73,6 +73,11 @@ class AbstractFinDiffLocalization(LocalizationData):
         return Vec2(wrtX, wrtY)
     
     def get_rotation_probability_dx(self, rot, ignore_roots):
+        def calculate(a, b):
+            _x = rot
+            while True:
+                if not math.isfinite(product):
+                    product = a / (_x - b)
         # placeholder
         pass
 
