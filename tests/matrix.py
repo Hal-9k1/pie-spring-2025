@@ -8,6 +8,11 @@ from matrix import Vec3
 from unittest import TestCase
 from unittest import skip
 
+def _assert_matrix_almost_equal(a, b, data_getter, test_case):
+    test_case.longMessage = True
+    for c, d in zip(data_getter(a), data_getter(b)):
+        test_case.assertAlmostEqual(c, d, msg=f'{repr(a)} !~= {repr(b)}')
+
 class TestMat2(TestCase):
     def test_create(self):
         self.assertIsInstance(Mat2.identity(), Mat2)
@@ -16,7 +21,12 @@ class TestMat2(TestCase):
         self.assertEqual(Mat2(1, 2, 3, 4), Mat2(1, 2, 3, 4))
 
     def test_from_angle(self):
-        self.assertEqual(Mat2.from_angle(pi / 2), Mat2(0, -1, 1, 0))
+        _assert_matrix_almost_equal(
+            Mat2.from_angle(pi / 2),
+            Mat2(0, -1, 1, 0),
+            lambda mat: mat._mat,
+            self
+        )
 
     def test_mul_mat(self):
         self.assertEqual(
@@ -61,9 +71,11 @@ class TestMat2(TestCase):
         )
 
     def test_inv(self):
-        self.assertEqual(
+        _assert_matrix_almost_equal(
             Mat2(1, 5, 0, 1).inv(),
-            Mat2(1, -5, 0, 1)
+            Mat2(1, -5, 0, 1),
+            lambda mat: mat._mat,
+            self
         )
 
     def test_is_finite(self):

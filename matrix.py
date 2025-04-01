@@ -43,8 +43,8 @@ class Mat2:
         d = self.det()
         return Mat2(
             self._mat[3] / d,
-            -self._mat[2] / d,
             -self._mat[1] / d,
+            -self._mat[2] / d,
             self._mat[0] / d
         )
 
@@ -207,7 +207,7 @@ class Vec2:
         return self._y
 
     def add(self, other):
-        return Vec2(self._x + other.get_x(), self._x + other.get_y())
+        return Vec2(self._x + other.get_x(), self._y + other.get_y())
 
     def mul(self, scalar):
         return Vec2(self._x * scalar, self._y * scalar)
@@ -258,6 +258,9 @@ class Vec3:
 
     def get_z(self):
         return self._vec[2]
+
+    def add(self, other):
+        return Vec3(*(a + b for a, b in zip(self._vec, other._vec)))
 
     def dot(self, other):
         return sum(a * b for a, b in zip(self._vec, other._vec))
