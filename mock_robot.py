@@ -1,8 +1,5 @@
 import time
-import logging
-
-logger = logging.getLogger(__name__)
-
+import log
 
 class MockRobot:
     """Simulates a robot with connected peripherals.
@@ -38,8 +35,9 @@ class MockRobot:
         }
     }
 
-    def __init__(self, max_devices, motor_ticks_per_sec=2000, start_pos="left"):
-        logger.warn("NOTICE: MockRobot instance constructed.")
+    def __init__(self, max_devices, logger_provider, motor_ticks_per_sec=2000, start_pos="left"):
+        self._logger = logger_provider.get_logger("MockRobot")
+        self._logger.warn("NOTICE: MockRobot instance constructed.")
         self._devices = {}
         self._device_types = {}
         self._max_devices = max_devices
@@ -53,12 +51,12 @@ class MockRobot:
         self._check_property(device_id, value_name)
         if self._device_types[device_id] == "koalabear":
             self._update_koalabear(device_id)
-        logger.debug(f"get:{device_id},{value_name}={self._devices[device_id][value_name]}")
+        self._logger.debug(f"get:{device_id},{value_name}={self._devices[device_id][value_name]}")
         return self._devices[device_id][value_name]
 
     def set_value(self, device_id, value_name, value):
         self._check_property(device_id, value_name)
-        logger.info(f"set:{device_id},{value_name}={str(value)}")
+        self._logger.info(f"set:{device_id},{value_name}={str(value)}")
         if self._device_types[device_id] == "koalabear":
             self._update_koalabear(device_id)
         expected_type = type(self._devices[device_id][value_name])
