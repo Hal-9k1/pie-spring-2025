@@ -11,6 +11,10 @@ class Mat2:
         self._mat = [m00, m10, m01, m11]
 
     @classmethod
+    def identity(cls):
+        return Mat2(1, 0, 0, 1)
+
+    @classmethod
     def from_angle(cls, angle):
         return Mat2(cos(angle), -sin(angle), sin(angle), cos(angle))
 
@@ -28,7 +32,7 @@ class Mat2:
                 self._mat[2] * other.get_x() + self._mat[3] * other.get_y()
             )
         elif isinstance(other, Number):
-            return Mat2(*(e * other) for e in self._mat)
+            return Mat2(*((e * other) for e in self._mat))
         else:
             raise ValueError('Invalid multiplicand type.')
 
@@ -45,7 +49,7 @@ class Mat2:
         )
 
     def is_finite(self):
-        return all(isfinite(e) for e in self._mat)
+        return all(isinstance(e, Number) and isfinite(e) for e in self._mat)
 
     def col(self, num):
         self._check_dim(num, True)
@@ -62,19 +66,26 @@ class Mat2:
 
     def _check_dim(self, num, col):
         option = 'column' if col else 'row'
-        if num != 0 and num != 1:
+        if not isinstance(num, int) or num < 0 or num > 1:
             raise ValueError(f'Bad {option} number {num}')
 
     def __eq__(self, other):
-        return isinstance(other, Mat2) and self._mat == other._mat
+        return isinstance(other, Mat2) and all(a == b for a, b in zip(self._mat, other._mat))
+
+    def __repr__(self):
+        return f'Mat2({", ".join(repr(e) for e in self._mat)})'
 
 class Mat3:
-    def __init___(self, m00, m10, m20, m01, m11, m21, m02, m12, m22):
+    def __init__(self, m00, m10, m20, m01, m11, m21, m02, m12, m22):
         self._mat = [
             m00, m10, m20,
             m01, m11, m21,
             m02, m12, m22
         ]
+
+    @classmethod
+    def identity(cls):
+        return Mat3(1, 0, 0, 0, 1, 0, 0, 0, 1)
 
     @classmethod
     def from_transform(self, rot, pos):
@@ -115,9 +126,12 @@ class Mat3:
     def inv(self):
          return self.cofactor().transpose().mul(1 / self.det())
 
+    def is_finite(self):
+        return all(isinstance(e, Number) and isfinite(e) for e in self._mat)
+
     def col(self, num):
         self._check_dim(num, True)
-        return Vec3(mat[num], self._mat[num + 3], self._mat[num + 6])
+        return Vec3(self._mat[num], self._mat[num + 3], self._mat[num + 6])
 
     def row(self, num):
         self._check_dim(num, False)
@@ -168,16 +182,23 @@ class Mat3:
 
     def _check_dim(self, num, col):
         option = 'column' if col else 'row'
-        if num < 0 or num > 2 or !isinstance(num, int):
+        if not isinstance(num, int) or num < 0 or num > 2:
             raise ValueError(f'Bad {option} number {num}')
 
     def __eq__(self, other):
-        return isinstance(other, Mat3) and self._mat == other._mat
+        return isinstance(other, Mat3) and all(a == b for a, b in zip(self._mat, other._mat))
+
+    def __repr__(self):
+        return f'Mat3({", ".join(repr(e) for e in self._mat)})'
 
 class Vec2:
     def __init__(self, x, y):
         self._x = x
         self._y = y
+
+    @classmethod
+    def zero(cls):
+        return Vec2(0, 0)
 
     def get_x(self):
         return self._x
@@ -218,9 +239,16 @@ class Vec2:
     def __eq__(self, other):
         return isinstance(other, Vec2) and self._x == other._x and self._y == other._y
 
+    def __repr__(self):
+        return f'Vec2({repr(self._x)}, {repr(self._y)})'
+
 class Vec3:
     def __init__(self, x, y, z):
         self._vec = [x, y, z]
+
+    @classmethod
+    def zero(cls):
+        return Vec3(0, 0, 0)
 
     def get_x(self):
         return self._vec[0]
@@ -240,4 +268,7 @@ class Vec3:
         return self._vec[index]
 
     def __eq__(self, other):
-        return isinstance(other, Vec3) and self._vec == other._vec
+        return isinstance(other, Vec3) and all(a == b for a, b in zip(self._vec, other._vec))
+
+    def __repr__(self):
+        return f'Vec3({", ".join(repr(e) for e in self._vec)})'
