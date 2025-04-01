@@ -1,5 +1,7 @@
 from abc import ABC
 from abc import abstractmethod
+from task import UnsupportedTaskError
+from task import WinTask
 
 class Layer(ABC):
     @abstractmethod
@@ -43,7 +45,7 @@ class LayerSetupInfo:
         return self._logger_provider.get_logger(label)
 
     def add_update_listener(self, listener):
-        self._robot_controller.addUpdateListener(listener)
+        self._robot_controller.add_update_listener(listener)
 
     def add_teardown_listener(self, listener):
         self._robot_controller.add_teardown_listener(listener)
@@ -88,57 +90,52 @@ class AbstractQueuedLayer(Layer):
 
 class TopLayerSequence(Layer):
     def __init__(self, layers):
-        # Is a list
         self._layers = layers
-
-        # is a iterator
         self._layer_iter = None
-
-        # Top level layer being operated on.
         self._layer = None
-
         self._logger = None
-
-    def is_task_done(self):
-        if has_next(self._layer_iter) and self._layer.is_task_done():
-            return True
-        else:
-            return False
 
     def setup(self, setup_info):
         name = []
-
         for elem in self._layers:
             name.append(elem.__class__)
-            elem.setup(setupInfo)
-        
+            elem.setup(setup_info)
         self._logger = setup_info.get_logger(f'TopLayerSequence[{name.join(", ")}]')
 
         self._layer_iter = iter(self._layers)
-        layer = next(self._layer_iter)
+        self._next_layer = None
+        self._layer = self._get_next_layer(True)
+
+    def is_task_done(self):
+        if self._get_next_layer(False) == None and self._layer.is_task_done():
+            return True
+        else:
+            return False
 
     def update(self, completed):
         subtasks = self._layer.update(iter(completed))
-        if(self._layer.is_task_done() and has_next(self._layer_iter)):
-            self._layer = self._layer_iter.next()
+        if self._layer.is_task_done() and self._get_next_layer(False) != None:
+            self._layer = self._get_next_layer(True)
         return subtasks
 
-    def has_next(self, layerIter):
-        if layerIter.next() == None:
-            return False
-        else:
-            return True
+    def _get_next_layer(self, consume):
+        if self._next_layer == None:
+            self._next_layer = next(self._layer_iter, None)
+        layer = self._next_layer
+        if consume:
+            self._next_layer = None
+        return layer
 
 class WinLayer(Task):
     def __init__(self):
-        self._emittedWin = False
+        self._emitted_win = False
 
-    def setup(self, setupInfo):
+    def setup(self, setup_info):
         pass
 
-    def update(self, iter(completed)):
-        self._emittedWin = True
+    def update(self, completed):
+        self._emitted_win = True
         return iter([WinTask()])
 
-    def accept_task(self, Task):
-        raise ValueError(Task)
+    def accept_task(self, task):
+        raise UnsupportedTaskError(self, task)
