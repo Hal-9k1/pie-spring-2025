@@ -30,18 +30,19 @@ class TestDusk(TestCase):
         proc.join()
 
     def _run_server(self):
+        dummy_server = None
         try:
             while self._server_process:
                 try:
-                    self._dummy_server = create_server(("", 22047))
+                    dummy_server = create_server(("", 22047))
                 except OSError:
                     pass
                 else:
                     break
-            self._dummy_server.settimeout(0.1)
+            dummy_server.settimeout(0.1)
             while self._server_process:
                 try:
-                    cxn = self._dummy_server.accept()[0]
+                    cxn = dummy_server.accept()[0]
                     try:
                         self._handle_connection(cxn)
                     finally:
@@ -53,9 +54,9 @@ class TestDusk(TestCase):
                 except SocketTimeoutError:
                     pass
         finally:
-            if hasattr(self, "_dummy_server"):
-                self._dummy_server.shutdown(SHUT_RDWR)
-                self._dummy_server.close()
+            if dummy_server:
+                dummy_server.shutdown(SHUT_RDWR)
+                dummy_server.close()
 
     def _handle_connection(self, cxn):
         while self._server_process:
@@ -112,7 +113,6 @@ class PacketAssert:
         self._error = None
 
     def complete(self):
-        import traceback
         self._completed_event.set()
 
     def error(self, error):
