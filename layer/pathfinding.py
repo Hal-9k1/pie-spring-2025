@@ -1,11 +1,12 @@
-from os import time
+from abc import ABC
+from math import copysign
+from math import cos
 from math import inf
 from math import sin
-from math import cos
 from math import sqrt
-from math import copysign
-from task import MoveToFieldTask, UnsupportedTaskError
 from matrix import Mat3
+from os import time
+from task import MoveToFieldTask, UnsupportedTaskError
 
 def _signum(num):
     return copysign(1, num)
