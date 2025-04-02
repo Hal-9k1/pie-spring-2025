@@ -333,4 +333,44 @@ class TestVec2(TestCase):
         self.assertEqual(Vec2(123, 456).get_perpendicular().dot(Vec2(123, 456)), 0)
 
 class TestVec3(TestCase):
-    pass
+    def test_create(self):
+        self.assertIsInstance(Vec3.zero(), Vec3)
+
+    def test_eq(self):
+        self.assertEqual(Vec3(1, 2, 3), Vec3(1, 2, 3))
+
+    def test_x(self):
+        self.assertEqual(Vec3(1, 2, 3).get_x(), 1)
+
+    def test_y(self):
+        self.assertEqual(Vec3(1, 2, 3).get_y(), 2)
+
+    def test_z(self):
+        self.assertEqual(Vec3(1, 2, 3).get_z(), 3)
+
+    def test_add(self):
+        self.assertEqual(
+            Vec3(1, 2, 3).add(Vec3(6, 5, 4)),
+            Vec3(7, 7, 7)
+        )
+
+    def test_dot(self):
+        self.assertEqual(
+            Vec3(1, 1, 1).dot(Vec3(-1, 0, 1)),
+            0
+        )
+
+    def test_get(self):
+        self.assertEqual(Vec3(1, 2, 3).get(1), 2)
+
+    def test_get_range(self):
+        with self.assertRaises(ValueError):
+            Vec3(1, 2, 3).get(-1)
+        with self.assertRaises(ValueError):
+            Vec3(1, 2, 3).get(3)
+
+    def test_get_type(self):
+        with self.assertRaises(ValueError):
+            Vec3(1, 2, 3).get(1.0)
+        with self.assertRaises(ValueError):
+            Vec3(1, 2, 3).get('foo')

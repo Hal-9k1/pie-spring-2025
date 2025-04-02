@@ -271,7 +271,7 @@ class Vec3:
         return sum(a * b for a, b in zip(self._vec, other._vec))
 
     def get(self, index):
-        if index < 0 or index > 2:
+        if not isinstance(index, int) or index < 0 or index > 2:
             raise ValueError(f'Bad index {index}')
         return self._vec[index]
 
