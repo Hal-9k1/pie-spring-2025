@@ -7,7 +7,7 @@ class LayerSetupInfo:
         self._gamepad0 = gamepad0
         self._gamepad1 = gamepad1
         self._logger_provider = logger_provider
-    
+
     def get_localizer(self):
         return self._robot_localizer
 
