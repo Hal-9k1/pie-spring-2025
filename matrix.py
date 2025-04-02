@@ -97,8 +97,10 @@ class Mat3:
 
     def mul(self, other):
         if isinstance(other, Mat3):
+            # Yes, the order of for clauses is correct for an outer row loop and inner col loop.
+            # Comprehensions are dumb.
             return Mat3(
-                *(self.row(row).dot(other.col(col)) for col in range(3) for row in range(3))
+                *(self.row(row).dot(other.col(col)) for row in range(3) for col in range(3))
             )
         elif isinstance(other, Vec2):
             extended = Vec3(other.get_x(), other.get_y(), 0.0)

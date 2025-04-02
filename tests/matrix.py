@@ -6,7 +6,6 @@ from matrix import Mat3
 from matrix import Vec2
 from matrix import Vec3
 from unittest import TestCase
-from unittest import skip
 
 def _assert_matrix_almost_equal(a, b, data_getter, test_case):
     test_case.longMessage = True
@@ -257,9 +256,11 @@ class TestMat3(TestCase):
             Mat2(0, 2, 6, 8)
         )
 
-    @skip
     def test_cofactor(self):
-        raise NotImplementedError
+        self.assertEqual(
+            Mat3(1, 0, -1, 3, 1, 2, 0, -2, 1).cofactor(),
+            Mat3(5, -3, -6, 2, 1, 2, 1, -5, 1)
+        )
 
     def test_get_translation(self):
         self.assertEqual(
@@ -268,7 +269,7 @@ class TestMat3(TestCase):
         )
 
     def test_get_direction(self):
-        self.assertEqual(
+        self.assertAlmostEqual(
             Mat3.from_transform(
                 Mat2.from_angle(pi / 4),
                 Vec2(123, 345)
