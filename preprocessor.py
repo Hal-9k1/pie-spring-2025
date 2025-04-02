@@ -56,7 +56,7 @@ def process_file(file_path, indent=" " * 4, module_name=None, module_list=None, 
                 break
             words = line.strip().split(" ")
             if not len(words):
-              module_buffer.append(line)  
+                module_buffer.append(line)
             elif words[0] == "import" or words[0] == "from":
                 imported_module_raw_name = words[1]
                 path_segments = imported_module_raw_name.split(".")

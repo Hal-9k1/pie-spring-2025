@@ -82,7 +82,7 @@ class TestMat2(TestCase):
         self.assertFalse(Mat2('foobar', 0, 3, 8).is_finite())
         self.assertFalse(Mat2(0, inf, 1, 0).is_finite())
         self.assertFalse(Mat2(nan, -8, 0, 2).is_finite())
-    
+
     def test_col(self):
         self.assertEqual(
             Mat2(0, 1, 2, 3).col(0),
@@ -141,7 +141,7 @@ class TestMat3(TestCase):
             Mat3.from_transform(Mat2.identity(), Vec2(0, 0)),
             Mat3.identity()
         )
-    
+
     def test_mul_mat(self):
         self.assertEqual(
             Mat3(*range(9)).mul(Mat3.identity()),
@@ -320,7 +320,7 @@ class TestVec2(TestCase):
     def test_angle_with(self):
         self.assertEqual(Vec2(0, 1).angle_with(Vec2(1, 0)), pi / 2)
         self.assertEqual(Vec2(1, 0).angle_with(Vec2(-1, 0)), pi)
-    
+
     def test_is_finite(self):
         self.assertTrue(Vec2(1, -1).is_finite())
         self.assertFalse(Vec2(nan, 0).is_finite())

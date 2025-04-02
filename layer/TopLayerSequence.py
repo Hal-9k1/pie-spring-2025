@@ -21,11 +21,9 @@ class TopLayerSequence(Layer):
 
     def setup(self, setup_info):
         name = []
-
         for elem in self._layers:
             name.append(elem.__class__)
             elem.setup(setupInfo)
-        
         self._logger = setup_info.get_logger(f'TopLayerSequence[{name.join(", ")}]')
 
         self._layer_iter = iter(self._layers)
