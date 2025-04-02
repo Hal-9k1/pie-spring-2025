@@ -9,7 +9,7 @@ class Layer(ABC):
         pass
 
     @abstractmethod
-    def isTaskDone(self):
+    def is_task_done(self):
         pass
 
     @abstractmethod
@@ -17,7 +17,7 @@ class Layer(ABC):
         pass
 
     @abstractmethod
-    def acceptTask(self, task):
+    def accept_task(self, task):
         pass
 
 
@@ -32,11 +32,13 @@ class LayerSetupInfo:
     def get_localizer(self):
         return self._robot_localizer
 
-    def get_gamepad0(self):
-        return self._gamepad0
-
-    def get_gamepad1(self):
-        return self._gamepad1
+    def get_gamepad(self, index):
+        if index == 0:
+            return self._gamepad0
+        elif index == 1:
+            return self._gamepad1
+        else:
+            raise ValueError(f'Invalid gamepad index {index}')
 
     def get_logger_provider(self):
         return self._logger_provider.clone()
@@ -63,7 +65,15 @@ class AbstractFunctionLayer(Layer):
         if self._emitted_subtask:
             raise RuntimeError("No more subtasks!")
         self._emitted_subtask = True
-        return iter([task])
+        return iter([self._subtask])
+
+    def accept_task(self, task):
+        self._subtask = self.map(task)
+        self._emitted_subtask = False
+
+    @abstractmethod
+    def map(self):
+        raise NotImplementedError
 
 
 class AbstractQueuedLayer(Layer):

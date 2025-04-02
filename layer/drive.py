@@ -1,10 +1,13 @@
 from actuators import Motor
 from layer import Layer
-from mechanisms import Wheel
-from task import AxialMovementTask, TankDriveTask, TurnTask, UnsupportedTaskError
-from units import convert
-from math import copysign
 from layer import LayerSetupInfo
+from math import copysign
+from mechanisms import Wheel
+from task import AxialMovementTask
+from task import TankDriveTask
+from task import TurnTask
+from task import UnsupportedTaskError
+from units import convert
 
 
 class TwoWheelDrive(Layer):
