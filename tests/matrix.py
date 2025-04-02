@@ -303,8 +303,34 @@ class TestVec2(TestCase):
         )
 
     def test_dot(self):
-        pass # START HERE
-        
+        self.assertEqual(Vec2(4, 4).dot(Vec2(-2, 2)), 0)
+
+    def test_len(self):
+        self.assertEqual(Vec2(3, 4).len(), 5)
+
+    def get_angle(self):
+        self.assertEqual(Vec2(1, 0), 0)
+        self.assertEqual(Vec2(0, 1), pi / 2)
+        self.assertEqual(Vec2(-1, 0), pi)
+        self.assertEqual(Vec2(0, -1), 3 * pi / 2)
+
+    def test_unit_len(self):
+        self.assertEqual(Vec2(134214, -89173).unit().len(), 1)
+
+    def test_angle_with(self):
+        self.assertEqual(Vec2(0, 1).angle_with(Vec2(1, 0)), pi / 2)
+        self.assertEqual(Vec2(1, 0).angle_with(Vec2(-1, 0)), pi)
+    
+    def test_is_finite(self):
+        self.assertTrue(Vec2(1, -1).is_finite())
+        self.assertFalse(Vec2(nan, 0).is_finite())
+        self.assertFalse(Vec2(0, -inf).is_finite())
+
+    def test_proj(self):
+        self.assertEqual(Vec2(1, 0).proj(Vec2(5, -7)), Vec2(5, 0))
+
+    def test_perpendicular(self):
+        self.assertEqual(Vec2(123, 456).get_perpendicular().dot(Vec2(123, 456)), 0)
 
 class TestVec3(TestCase):
     pass

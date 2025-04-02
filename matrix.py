@@ -229,14 +229,17 @@ class Vec2:
     def angle_with(self, other):
         return acos(self.unit().dot(other.unit()))
 
-    def isfinite(self):
+    def is_finite(self):
         return isfinite(self._x) and isfinite(self._y)
 
     def proj(self, projectee):
         return self.mul(self.dot(projectee) / self.dot(self))
 
     def get_perpendicular(self):
-        return Vec2(1, -self._y / self._x)
+        p = Vec2(1, -self._x / self._y)
+        if not p.is_finite():
+            p = Vec2(0, 1)
+        return p
 
     def __eq__(self, other):
         return isinstance(other, Vec2) and self._x == other._x and self._y == other._y
