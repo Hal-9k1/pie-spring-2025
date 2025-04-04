@@ -1,4 +1,5 @@
 from abc import ABC
+from layer import Layer
 from math import copysign
 from math import cos
 from math import inf
@@ -11,7 +12,7 @@ from task import MoveToFieldTask, UnsupportedTaskError
 def _signum(num):
     return copysign(1, num)
 
-class PathfindingLayer:
+class PathfindingLayer(Layer):
     GOAL_COMPLETE_EPSILON = 0.01
     TRAJECTORY_SEARCH_INCREMENT = 0.01
     TARGET_ANGLE_COEFF = 0.5
@@ -36,7 +37,7 @@ class PathfindingLayer:
         now = time()
         if now - self._last_calc_time > self.CALCULATE_INTERVAL:
             self._calculate_path()
-            self.lastCalcTime = now
+            self._last_calc_time = now
         return iter([HolonomicDriveTask(
             self._current_trajectory.axial,
             -self._current_trajectory.lateral,
@@ -46,7 +47,7 @@ class PathfindingLayer:
     def accept_task(self, task):
         if isinstance(task, MoveToFieldTask):
             self._goal = task.get_goal_transform()
-            self.lastCalcTime = -inf
+            self._last_calc_time = -inf
         else:
             raise UnsupportedTaskError(self, task)
 
