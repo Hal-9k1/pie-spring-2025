@@ -7,12 +7,13 @@ from math import sin
 from math import sqrt
 from matrix import Mat3
 from os import time
-from task import MoveToFieldTask, UnsupportedTaskError
+from task import MoveToFieldTask
+from task import UnsupportedTaskError
 
 def _signum(num):
     return copysign(1, num)
 
-class PathfindingLayer(Layer):
+class DynwinPathfinder(Layer):
     GOAL_COMPLETE_EPSILON = 0.01
     TRAJECTORY_SEARCH_INCREMENT = 0.01
     TARGET_ANGLE_COEFF = 0.5
