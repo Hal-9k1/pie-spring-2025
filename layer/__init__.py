@@ -1,44 +1,47 @@
 from abc import ABC
 from abc import abstractmethod
-from task import UnsupportedTaskError
 from task import WinTask
 
 class Layer(ABC):
-    @abstractmethod
-    def setup(self, setup):
+    def setup(self, setup_info):
         pass
 
     @abstractmethod
-    def is_task_done(self):
+    def get_input_tasks(self):
+        raise NotImplementedError
+
+    @abstractmethod
+    def get_output_tasks(self):
+        raise NotImplementedError
+
+    def subtask_completed(self, task):
         pass
 
     @abstractmethod
-    def update(self, completed):
-        pass
+    def process(self, ctx):
+        raise NotImplementedError
 
     @abstractmethod
     def accept_task(self, task):
-        pass
+        raise NotImplementedError
 
 
 class LayerSetupInfo:
-    def __init__(self, robot_controller, robot_localizer, gamepad0, gamepad1, logger_provider):
+    def __init__(self, robot, robot_controller, robot_localizer, gamepad, keyboard, logger_provider):
         self._robot_controller = robot_controller
         self._robot_localizer = robot_localizer
-        self._gamepad0 = gamepad0
-        self._gamepad1 = gamepad1
+        self._gamepad = gamepad
+        self._keyboard = keyboard
         self._logger_provider = logger_provider
     
+    def get_robot(self):
+        return self._robot
+
     def get_localizer(self):
         return self._robot_localizer
 
-    def get_gamepad(self, index):
-        if index == 0:
-            return self._gamepad0
-        elif index == 1:
-            return self._gamepad1
-        else:
-            raise ValueError(f'Invalid gamepad index {index}')
+    def get_gamepad(self):
+        return self._gamepad
 
     def get_logger_provider(self):
         return self._logger_provider.clone()
@@ -53,23 +56,38 @@ class LayerSetupInfo:
         self._robot_controller.add_teardown_listener(listener)
 
 
+class LayerProcessContext:
+    def __init__(self, emit_subtask_hook, request_task_hook):
+        self._emit_subtask_hook = emit_subtask_hook
+        self._request_task_hook = request_task_hook
+
+    def emit_subtask(self, subtask):
+        self._emit_subtask_hook(subtask)
+
+    def request_task(self):
+        self._request_task_hook()
+
+
 class AbstractFunctionLayer(Layer):
     def __init__(self):
         self._emitted_subtask = True
+        self._subtask_completed = True
         self._subtask = None
 
-    def is_task_done(self):
-        return self._emitted_subtask
+    def subtask_completed(self, task):
+        self._subtask_completed = True
 
-    def update(self, completed):
-        if self._emitted_subtask:
-            raise RuntimeError("No more subtasks!")
-        self._emitted_subtask = True
-        return iter([self._subtask])
+    def process(self, ctx):
+        if self._subtask_completed:
+            ctx.request_task()
+        if not self._emitted_subtask:
+            ctx.emit_subtask(self._subtask)
+            self._emitted_subtask = True
 
     def accept_task(self, task):
         self._subtask = self.map(task)
         self._emitted_subtask = False
+        self._subtask_completed = False
 
     @abstractmethod
     def map(self):
@@ -81,71 +99,92 @@ class AbstractQueuedLayer(Layer):
         self._subtask_iter = None
         self._next_subtask = None
 
-    def setup(self, setup_info):
-        pass
+    def subtask_completed(self, task):
+        self._advance()
 
-    def is_task_done(self):
-        return self._get_next_subtask() == None
+    def _advance(self):
+        self._next_subtask = next(self._subtask_iter, None)
+        if not self._next_subtask:
+            self._subtask_iter = None
 
-    def update(self, completed):
-        subtask = self._get_next_subtask()
-        self._next_subtask = None
-        return subtask
+    def process(self, ctx):
+        if not self._subtask_iter:
+            ctx.request_task()
+        if self._next_subtask:
+            ctx.emit_subtask(self._next_subtask)
+            self._next_subtask = None
 
-    def _get_next_subtask(self):
-        if self._next_subtask == None:
-            self._next_subtask = next(self._subtask_iter, None)
-        return self._next_subtask
+    def accept_task(self, task):
+        self._subtask_iter = iter(self.map_to_subtasks(task))
+        self._advance()
+
+    @abstractmethod
+    def map_to_subtasks(self, task):
+        raise NotImplementedError
 
 
-class TopLayerSequence(Layer):
+class SequenceLayer(Layer):
     def __init__(self, layers):
         self._layers = layers
-        self._layer_iter = None
         self._layer = None
         self._logger = None
 
     def setup(self, setup_info):
-        name = []
-        for elem in self._layers:
-            name.append(elem.__class__)
-            elem.setup(setup_info)
-        self._logger = setup_info.get_logger(f'TopLayerSequence[{name.join(", ")}]')
-
+        for l in self._layers:
+            l.setup(setup_info)
         self._layer_iter = iter(self._layers)
-        self._next_layer = None
-        self._layer = self._get_next_layer(True)
 
-    def is_task_done(self):
-        if self._get_next_layer(False) == None and self._layer.is_task_done():
-            return True
-        else:
-            return False
+    def subtask_completed(self, task):
+        self._layer.subtask_completed(task)
 
-    def update(self, completed):
-        subtasks = self._layer.update(iter(completed))
-        if self._layer.is_task_done() and self._get_next_layer(False) != None:
-            self._layer = self._get_next_layer(True)
-        return subtasks
+    def process(self, ctx):
+        if not self._layer_iter:
+            return
+        if not self._layer:
+            self._layer = next(self._layer_iter, None)
+            if not self._layer:
+                ctx.request_task()
+                self._layer_iter = None
+                return
+        wrapped_ctx = LayerProcessContext(
+            lambda t: ctx.emit_subtask(t),
+            lambda: self._advance()
+        )
+        self._layer.process(wrapped_ctx)
 
-    def _get_next_layer(self, consume):
-        if self._next_layer == None:
-            self._next_layer = next(self._layer_iter, None)
-        layer = self._next_layer
-        if consume:
-            self._next_layer = None
-        return layer
+    def _advance(self):
+        self._layer = None
+
+    def accept_task(self, task):
+        raise ValueError
+
+    def __repr__(self):
+        return f'SequenceLayer({self._layers})'
+
+    def __str__(self):
+        return f'SequenceLayer({[str(l) for l in self._layers]})'
+
 
 class WinLayer(Task):
     def __init__(self):
         self._emitted_win = False
+        self._completed_win = False
 
-    def setup(self, setup_info):
-        pass
+    def get_input_tasks(self):
+        return []
 
-    def update(self, completed):
-        self._emitted_win = True
-        return iter([WinTask()])
+    def get_output_tasks(self):
+        return [WinTask]
+
+    def subtask_completed(self, task):
+        self._completed_win = True
+
+    def process(self, ctx):
+        if not self._emitted_win:
+            ctx.emit_subtask(WinTask())
+        if self._completed_win:
+            ctx.request_task()
 
     def accept_task(self, task):
-        raise UnsupportedTaskError(self, task)
+        raise ValueError
+
