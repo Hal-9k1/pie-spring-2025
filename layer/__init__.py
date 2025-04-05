@@ -132,19 +132,15 @@ class SequenceLayer(Layer):
     def setup(self, setup_info):
         for l in self._layers:
             l.setup(setup_info)
-        self._layer_iter = iter(self._layers)
 
     def subtask_completed(self, task):
         self._layer.subtask_completed(task)
 
     def process(self, ctx):
-        if not self._layer_iter:
-            return
         if not self._layer:
             self._layer = next(self._layer_iter, None)
             if not self._layer:
                 ctx.request_task()
-                self._layer_iter = None
                 return
         wrapped_ctx = LayerProcessContext(
             lambda t: ctx.emit_subtask(t),
@@ -156,7 +152,9 @@ class SequenceLayer(Layer):
         self._layer = None
 
     def accept_task(self, task):
-        raise ValueError
+        for layer in self._layers:
+            self._layers.accept_task(task)
+        self._layer_iter = iter(self._layers)
 
     def __repr__(self):
         return f'SequenceLayer({self._layers})'
@@ -171,10 +169,10 @@ class WinLayer(Task):
         self._completed_win = False
 
     def get_input_tasks(self):
-        return []
+        return set()
 
     def get_output_tasks(self):
-        return [WinTask]
+        return {WinTask}
 
     def subtask_completed(self, task):
         self._completed_win = True

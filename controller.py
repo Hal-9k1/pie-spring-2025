@@ -55,7 +55,7 @@ class RobotController:
     def __init__(self):
         self._layers = None
 
-    def setup(self, robot, localizer, layers, gamepad, keyboard, logger_provider):
+    def setup(self, robot, localizer, layers, gamepad, keyboard, logger_provider, debug_mode=False):
         self._logger = logger_provider.get_logger("RobotController")
         setup_info = LayerSetupInfo(
             self,
@@ -68,13 +68,13 @@ class RobotController:
         for layer in layers.get_verts():
             layer.setup(setup_info)
         self._layers = layers.map_all(LayerInfo)
+        self._debug_mode = debug_mode
         self._update_listeners = []
         self._teardown_listeners = []
 
     def update():
         for listener in self._update_listeners:
             listener()
-
         if layers == None:
             return True
 

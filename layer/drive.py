@@ -82,9 +82,7 @@ class TwoWheelDrive(Layer):
     def process(self, ctx):
         if self._should_request_task:
             ctx.request_task()
-            self._should_request_task = False
-
-        if not self._is_direct_control:
+        else:
             left_delta = self._left_wheel.get_distance() - self._left_start_pos
             left_done = ((left_delta < 0) == (self._left_goal_delta < 0)
                 and abs(left_delta) >= abs(self._left_goal_delta))
@@ -93,31 +91,27 @@ class TwoWheelDrive(Layer):
                 and abs(right_delta) >= abs(self._right_goal_delta))
             if left_done and right_done:
                 self._should_request_task = True
-                self._is_direct_control = True
                 self._left_wheel.set_velocity(0)
                 self._right_wheel.set_velocity(0)
 
     def accept_task(self, task):
         if isinstance(task, TankDriveTask):
-            self._is_direct_control = True
             self._should_request_task = True
             max_abs_power = max(abs(task.left), abs(task.right), 1)
             self._left_wheel.set_velocity(task.left / max_abs_power)
             self._right_wheel.set_velocity(task.right / max_abs_power)
         elif isinstance(task, AxialMovementTask):
-            self._is_direct_control = False
             self._should_request_task = False
             self._left_goal_delta = task.distance * self.GEAR_RATIO * self.SLIPPING_CONSTANT
             self._right_goal_delta = task.distance * self.GEAR_RATIO * self.SLIPPING_CONSTANT
         elif isinstance(task, TurnTask):
-            self._is_direct_control = False
             self._should_request_task = False
             self._left_goal_delta = (-task.angle * self.WHEEL_SPAN_RADIUS * self.GEAR_RATIO
                 * self.SLIPPING_CONSTANT)
             self._right_goal_delta = (task.angle * self.WHEEL_SPAN_RADIUS * self.GEAR_RATIO
                 * self.SLIPPING_CONSTANT)
 
-        if not self._is_direct_control:
+        if not self._should_request_task:
             self._left_start_pos = self._left_wheel.get_distance()
             self._right_start_pos = self._right_wheel.get_distance()
             self._left_wheel.set_velocity(copysign(1, self._left_goal_delta))
