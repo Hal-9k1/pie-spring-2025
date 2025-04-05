@@ -27,24 +27,31 @@ class LayerGraph:
         for connection in zip(chain[:-1], chain[1:]):
             self.add_connection(connection)
 
+    def get_verts(self):
+        return {e for l in (self._parents.keys(), *self._parents.values()) for e in l}
+
     def map_all(self, mapper):
-        elems = {e for l in (self._parents.keys(), *self._parents.values()) for e in l}
-        mapped = {e: mapper(e) for e in elems}
+        verts = self.get_verts()
+        mapped = {v: mapper(v) for v iv verts}
         new = LayerGraph()
         new._parents = {mapped[k]: {mapped[vi] for vi in v} for k, v in self._parents.items()}
         new._children = {mapped[k]: {mapped[vi] for vi in v} for k, v in self._children.items()}
         return new
 
-    def get_children(self, elem):
-        return self._children[elem]
+    def get_children(self, vertex):
+        return self._children.get(vertex, set())
 
-    def get_parents(self, elem):
-        return self._parents[elem]
+    def get_parents(self, vertex):
+        return self._parents.get(vertex, set())
+
+    def get_sources(self):
+        return {v in self.get_verts() if v not in self._parents}
+
+    def get_sinks(self):
+        return {v in self.get_verts() if v not in self._children}
 
 
 class RobotController:
-    MAX_UNCONSUMED_REPORT_TASKS = 4
-
     def __init__(self):
         self._layers = None
 
@@ -58,9 +65,9 @@ class RobotController:
             keyboard,
             logger_provider
         )
-        for layer in layers:
+        for layer in layers.get_verts():
             layer.setup(setup_info)
-        self._layers = [LayerInfo(layer) for layer in layers]
+        self._layers = layers.map_all(LayerInfo)
         self._update_listeners = []
         self._teardown_listeners = []
 
