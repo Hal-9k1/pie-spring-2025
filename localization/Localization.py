@@ -43,18 +43,20 @@ class AbstractFinDiffLocalization(LocalizationData):
 
     def get_position_probability_dx(self, pos, ignore_roots):
         def calculations(b):
-            _negative_center = pos.mul(-1)
-            _epsilon_vec = Vec2(self.epsilon, self.epsilon)
-            while True:
-                if(math.isfinite(_product) is not True):
-                    _diff = _negative_center.add(b)
-                    _factor = 1.0 / (_diff.dot(_diff) + 1.0) - 1.0
-                    _product = 1.0 / _factor
-                    _negative_center = _negative_center.add(_epsilon_vec)
-                else:
-                    return _product
-        # What is the equiivalent of the reduce function in python?
-        ignore_root_factor = list(reduce(calculations(1.0), ignore_roots))
+            if b is not None:
+                _negative_center = pos.mul(-1)
+                _epsilon_vec = Vec2(self.epsilon, self.epsilon)
+                while True:
+                    if(math.isfinite(_product) is not True):
+                        _diff = _negative_center.add(b)
+                        _factor = 1.0 / (_diff.dot(_diff) + 1.0) - 1.0
+                        _product = 1.0 / _factor
+                        _negative_center = _negative_center.add(_epsilon_vec)
+                    else:
+                        return _product
+            else:
+                return 1.0
+        ignore_root_factor = list(reduce(lambda x,y : x*y ,map(calculations, ignore_roots)))
         return (self.get_position_probability(pos.add(Vec2(self._epsilon, 0))) - self.get_position_probability(pos)) / self._epsilon * ignore_root_factor
     
     def get_position_probability_dy(self, pos, ignore_roots):
@@ -74,12 +76,19 @@ class AbstractFinDiffLocalization(LocalizationData):
     
     def get_rotation_probability_dx(self, rot, ignore_roots):
         def calculate(a, b):
-            _x = rot
-            while True:
-                if not math.isfinite(product):
-                    product = a / (_x - b)
-        # placeholder
-        pass
+            if (a is not None and b is not None):
+                _x = rot
+                while True:
+                    if not math.isfinite(_product):
+                        _product = a / (_x - b)
+                        _x = _x + self._epsilon
+                    else:
+                        return _product
+            else:
+                return 1.0
+        ignore_root_factor = list(reduce(lambda x,y: calculate(x,y), ignore_roots))
+        # Question: in the code it just says get_rotational_probability, does it need to be with respect to x or y or some other thing?
+        return (self.get_rotational_probability(rot + self._epsilon) - self.get_rotational_probability(rot)) / self._epsilon * ignore_root_factor
 
 class LocalizationSource(ABC):
     @abstractmethod
