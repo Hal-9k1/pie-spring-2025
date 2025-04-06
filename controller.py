@@ -4,6 +4,15 @@ class LayerGraph:
         self._children = {}
 
     def add_connection(self, a, b):
+        parent_outs = a.get_output_tasks()
+        child_ins = b.get_input_tasks()
+        if not isinstance(parent_outs, set):
+            raise TypeError(f'Output tasks of {a} is not a set')
+        if not isinstance(child_ins, set):
+            raise TypeError(f'Input tasks of {b} is not a set')
+        if not parent_outs.isdisjoint(child_ins):
+            raise TypeError(f'Parent {a} and child {b} share no compatible task interface')
+
         if a not in self._children:
             self._children[a] = {b}
         else:
@@ -95,13 +104,13 @@ class RobotController:
 
             for task in completed_tasks:
                 for parent in self._layers.get_parents(layer):
-                    if any(isinstance(task, cls) for cls in layer.get_output_tasks()):
+                    if any(isinstance(task, cls) for cls in parent.get_output_tasks()):
                         parent.subtask_completed(task)
                         hot.add(parent)
 
             for task in subtasks:
                 for child in self._layers.get_children(layer):
-                    if any(isinstance(task, cls) for cls in layer.get_input_tasks()):
+                    if any(isinstance(task, cls) for cls in child.get_input_tasks()):
                         child.accept_task(task)
 
             if escalate and not self._layers.get_parents(layer):
