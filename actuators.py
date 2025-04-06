@@ -4,12 +4,12 @@ import time
 
 class Motor:
     """Wraps a PiE KoalaBear-controlled motor."""
-    def __init__(self, robot, logger_provider, controller_id, motor):
+    def __init__(self, robot, logger, controller_id, motor):
         self._controller = controller_id
         self._motor = motor
         self._robot = robot
         self._is_inverted = False
-        self._logger = logger_provider.get_logger("Motor")
+        self._logger = logger
     def set_invert(self, invert):
         self._set("invert", invert)
         self._is_inverted = invert
