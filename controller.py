@@ -4,6 +4,10 @@ class LayerGraph:
         self._children = {}
 
     def add_connection(self, a, b):
+        if not isinstance(a, Layer):
+            raise TypeError(f'{a} is not a Layer')
+        if not isinstance(b, Layer):
+            raise TypeError(f'{b} is not a Layer')
         parent_outs = a.get_output_tasks()
         child_ins = b.get_input_tasks()
         if not isinstance(parent_outs, set):
@@ -42,14 +46,6 @@ class LayerGraph:
 
     def get_verts(self):
         return {e for l in (self._parents.keys(), *self._parents.values()) for e in l}
-
-    def map_all(self, mapper):
-        verts = self.get_verts()
-        mapped = {v: mapper(v) for v iv verts}
-        new = LayerGraph()
-        new._parents = {mapped[k]: {mapped[vi] for vi in v} for k, v in self._parents.items()}
-        new._children = {mapped[k]: {mapped[vi] for vi in v} for k, v in self._children.items()}
-        return new
 
     def get_children(self, vertex):
         return self._children.get(vertex, set())
@@ -96,7 +92,7 @@ class RobotController:
         )
         for layer in layers.get_verts():
             layer.setup(setup_info)
-        self._layers = layers.map_all(LayerInfo)
+        self._layers = layers
         self._debug_mode = debug_mode
         self._update_listeners = []
         self._teardown_listeners = []
