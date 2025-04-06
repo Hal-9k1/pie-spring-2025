@@ -4,7 +4,7 @@ from task import Task
 
 
 class TestLayerGraph(TestCase):
-    def setUp(self);
+    def setUp(self):
         self._g = LayerGraph()
 
     def test_add_connection(self):
