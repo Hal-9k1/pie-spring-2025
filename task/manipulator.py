@@ -1,5 +1,6 @@
 from task import Task
 
+
 class LiftTask(Task):
     """
     Extends or retracts the lift.

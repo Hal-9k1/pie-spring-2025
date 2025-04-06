@@ -2,7 +2,7 @@ from task import Task
 from matrix import Mat3
 
 
-class MoveToFieldTask:
+class MoveToFieldTask(Task):
     """
     Instructs the robot to pathfind to a field space transform while avoiding obstacles.
     """
