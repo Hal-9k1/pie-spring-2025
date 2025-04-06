@@ -17,10 +17,14 @@ class LayerGraph:
             self._children[a] = {b}
         else:
             self._children[a].add(b)
+
         if b not in self._parents:
             self._parents[b] = {a}
         else:
             self._parents[b].add(a)
+
+        if self._check_cyclic(a):
+            raise ValueError(f'Cycle detected')
 
     def add_connections(self, connections):
         try:
@@ -58,6 +62,22 @@ class LayerGraph:
 
     def get_sinks(self):
         return {v in self.get_verts() if v not in self._children}
+
+    def _check_cyclic(self, start):
+        visited = set()
+        stack = [(start, iter(self._children.get(start, [])))]
+        while stack:
+            child = next(stack[-1][1], None)
+            if child:
+                if any(e[0] == child for e in stack):
+                    return True
+                if child in visited:
+                    continue
+                visited.add(child)
+                stack.append([child, iter(self._children.get(child, [])]))
+            else:
+                del stack[-1]
+        return False
 
 
 class RobotController:
