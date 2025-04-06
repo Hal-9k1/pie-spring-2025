@@ -96,6 +96,8 @@ class RobotController:
             completed_tasks = []
             subtasks = []
 
+            # need to add request_task back so sublayer that has already marked task as completed
+            # can still pass control upwards in subsequent updates
             ctx = LayerProcessContext(
                 lambda t: subtasks.append(subtask),
                 lambda t: completed_tasks.append(t)
@@ -123,112 +125,9 @@ class RobotController:
         return False
     }
 
-    /**
-     * Registers a function to be called on every update.
-     * Registers a function to be called on every update of the controller before layer work is
-     * performed. Listeners are executed in registration order. After teardown,
-     * listeners are unregistered.
-     *
-     * @param listener - the function to be registered as an update listener.
-     */
-    public void addUpdateListener(Runnable listener) {
-        updateListeners.add(listener);
-    }
+    def add_update_listener(self, listener):
+        self._update_listeners.append(listener)
 
-    /**
-     * Registers a function to be called when the layer stack finishes executing.
-     * On the first update after the topmost layer runs out of tasks, the
-     * listeners are called in registration order, then unregistered.
-     *
-     * @param listener - the function to be registered as an update listener.
-     */
-    public void addTeardownListener(Runnable listener) {
-        teardownListeners.add(listener);
-    }
-
-    /**
-     * Thinly wraps a Layer while storing its last accepted task.
-     */
-    private static class LayerInfo {
-        /**
-         * The contained Layer.
-         */
-        private Layer layer;
-
-        /**
-         * The last tasks the contained Layer accepted at once.
-         */
-        private ArrayList<Task> lastTasks;
-
-        /**
-         * Whether the previous accepted task satisfied the Layer's need for new tasks.
-         */
-        private boolean lastTaskSaturated;
-
-        /**
-         * Constructs a LayerInfo.
-         *
-         * @param layer - the Layer to contain.
-         */
-        LayerInfo(Layer layer) {
-            this.layer = layer;
-            lastTasks = new ArrayList<>();
-            lastTaskSaturated = true;
-        }
-
-        /**
-         * Returns the implementing class name of the contained Layer.
-         *
-         * @return the contained Layer's concrete class name.
-         */
-        public String getName() {
-            return layer.getClass().getSimpleName();
-        }
-
-        /**
-         * Calls {@link Layer#isTaskDone} on the contained Layer.
-         *
-         * @return whether the contained Layer is finished processing its last accepted task.
-         */
-        public boolean isTaskDone() {
-            return layer.isTaskDone();
-        }
-
-        /**
-         * Calls {@link Layer#update} on the contained Layer.
-         *
-         * @param completed - an iterable of the tasks emitted by this Layer that have been
-         * completed since the last call to this method.
-         * @return an iterator of the tasks for the layer below to accept.
-         */
-        public Iterator<Task> update(Iterable<Task> completed) {
-            return layer.update(completed);
-        }
-
-        /**
-         * Calls {@link Layer#acceptTask} on the contained Layer.
-         * Must not be called if {@link #isTaskDone} returns false.
-         *
-         * @param task - the task the contained layer should be offered.
-         */
-        public void acceptTask(Task task) {
-            if (lastTaskSaturated) {
-                lastTasks.clear();
-            }
-            lastTasks.add(task);
-            layer.acceptTask(task);
-            lastTaskSaturated = !layer.isTaskDone();
-        }
-
-        /**
-         * Returns the layer's last accepted tasks.
-         *
-         * @return an iterable of the tasks last accepted by the layer.
-         * @see #acceptTask
-         */
-        public Iterable<Task> getLastTasks() {
-            return lastTasks;
-        }
-    }
-}
+    def add_teardown_listener(self, listener):
+        self._teardown_listeners.append(listener)
 
