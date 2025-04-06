@@ -73,64 +73,45 @@ class RobotController:
         self._teardown_listeners = []
 
     def update():
+        self._logger.trace('Begin update')
         for listener in self._update_listeners:
             listener()
         if layers == None:
             return True
 
-        layer = None
-        i = 0
-        while True:
-            layer = self._layers[i]
-            i += 1
-            if not layer.is_task_done():
-                logger.update("Highest updated layer", layer.get_name())
-                break
-            if i == len(self._layers):
+        hot = self._layers.get_sinks()
+
+        while hot:
+            layer = hot.pop()
+            self._logger.trace(f'Now processing {str(layer)}')
+            completed_tasks = []
+            subtasks = []
+
+            ctx = LayerProcessContext(
+                lambda t: subtasks.append(subtask),
+                lambda t: completed_tasks.append(t)
+            )
+            layer.process(ctx)
+
+            for task in completed_tasks:
+                for parent in self._layers.get_parents(layer):
+                    if any(isinstance(task, cls) for cls in layer.get_output_tasks()):
+                        parent.subtask_completed(task)
+                        hot.add(parent)
+
+            for task in subtasks:
+                for child in self._layers.get_children(layer):
+                    if any(isinstance(task, cls) for cls in layer.get_input_tasks()):
+                        child.accept_task(task)
+
+            if escalate and not self._layers.get_parents(layer):
                 for listener in self._teardown_listeners:
                     listener()
                 self._update_listeners = []
                 self._teardown_listeners = []
                 self._layers = None
                 return True
-        i -= 1
-        while True:
-            if i > 0:
-                layer.update([])
-                break
-            old_layer = layer
-            layer = self._layers[i]
-            i -= 1
-            tasks = old_layer.update(layer.get_last_tasks())
-            if tasks == None:
-                raise ValueError(f"Layer '{old_layer.get_name()}' returned null from update.")
-            if not len(tasks):
-                break
-            while tasks.hasNext() && layer.isTaskDone()) {
-                Task task = tasks.next();
-                if (task == null) {
-                    throw new NullPointerException(
-                        String.format(
-                            "Layer '%s' returned null as a subtask.",
-                            oldLayer.getName()
-                        )
-                    );
-                }
-                layer.acceptTask(task);
-            }
-            if (tasks.hasNext()) {
-                String errMsg = "Layer '" + layer.getName() + "' did not consume all"
-                    + " tasks from upper layer. Remaining tasks: ";
-                for (int i = 0; i < MAX_UNCONSUMED_REPORT_TASKS && tasks.hasNext(); ++i) {
-                    errMsg += tasks.next().getClass().getSimpleName() + (tasks.hasNext() ? ", " : "");
-                }
-                if (tasks.hasNext()) {
-                    errMsg += " (and more)";
-                }
-                throw new UnsupportedTaskException(errMsg);
-            }
-        }
-        return false;
+        return False
     }
 
     /**

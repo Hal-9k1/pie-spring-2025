@@ -57,15 +57,15 @@ class LayerSetupInfo:
 
 
 class LayerProcessContext:
-    def __init__(self, emit_subtask_hook, request_task_hook):
+    def __init__(self, emit_subtask_hook, complete_task_hook):
         self._emit_subtask_hook = emit_subtask_hook
-        self._request_task_hook = request_task_hook
+        self._complete_task_hook = complete_task_gook
 
     def emit_subtask(self, subtask):
         self._emit_subtask_hook(subtask)
 
-    def request_task(self):
-        self._request_task_hook()
+    def complete_task(self, task):
+        self._complete_task_hook()
 
 
 class AbstractFunctionLayer(Layer):
@@ -73,18 +73,21 @@ class AbstractFunctionLayer(Layer):
         self._emitted_subtask = True
         self._subtask_completed = True
         self._subtask = None
+        self._task = None
 
     def subtask_completed(self, task):
         self._subtask_completed = True
 
     def process(self, ctx):
         if self._subtask_completed:
-            ctx.request_task()
+            if self._task:
+                ctx.complete_task(self._task)
         if not self._emitted_subtask:
             ctx.emit_subtask(self._subtask)
             self._emitted_subtask = True
 
     def accept_task(self, task):
+        self._task = task
         self._subtask = self.map(task)
         self._emitted_subtask = False
         self._subtask_completed = False
@@ -98,6 +101,7 @@ class AbstractQueuedLayer(Layer):
     def __init__(self):
         self._subtask_iter = None
         self._next_subtask = None
+        self._task = None
 
     def subtask_completed(self, task):
         self._advance()
@@ -109,7 +113,8 @@ class AbstractQueuedLayer(Layer):
 
     def process(self, ctx):
         if not self._subtask_iter:
-            ctx.request_task()
+            if self._task:
+                ctx.complete_task(self._task)
         if self._next_subtask:
             ctx.emit_subtask(self._next_subtask)
             self._next_subtask = None
@@ -140,11 +145,12 @@ class SequenceLayer(Layer):
         if not self._layer:
             self._layer = next(self._layer_iter, None)
             if not self._layer:
-                ctx.request_task()
+                if self._task:
+                    ctx.complete_task(self._task)
                 return
         wrapped_ctx = LayerProcessContext(
             lambda t: ctx.emit_subtask(t),
-            lambda: self._advance()
+            lambda t: self._advance(),
         )
         self._layer.process(wrapped_ctx)
 
@@ -152,6 +158,7 @@ class SequenceLayer(Layer):
         self._layer = None
 
     def accept_task(self, task):
+        self._task = task
         for layer in self._layers:
             self._layers.accept_task(task)
         self._layer_iter = iter(self._layers)
@@ -181,7 +188,6 @@ class WinLayer(Task):
         if not self._emitted_win:
             ctx.emit_subtask(WinTask())
         if self._completed_win:
-            ctx.request_task()
 
     def accept_task(self, task):
         raise ValueError
