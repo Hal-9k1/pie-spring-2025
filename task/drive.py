@@ -155,4 +155,3 @@ class TankDriveTask(Task):
                  indicate forward movement and negative values indicate backward.
         """
         return self._right
-

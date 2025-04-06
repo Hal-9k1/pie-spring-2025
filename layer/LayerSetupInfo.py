@@ -28,4 +28,3 @@ class LayerSetupInfo:
 
     def add_teardown_listener(self, listener):
         self._robot_controller.add_teardown_listener(listener)
-

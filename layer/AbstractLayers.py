@@ -34,4 +34,3 @@ class AbstractQueuedLayer(Layer):
         if self._next_subtask == None:
             self._next_subtask = next(self._subtask_iter, None)
         return self._next_subtask
-

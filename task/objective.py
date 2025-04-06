@@ -22,4 +22,3 @@ class MoveToFieldTask:
         :return: The goal field space transform.
         """
         return self._transform
-
