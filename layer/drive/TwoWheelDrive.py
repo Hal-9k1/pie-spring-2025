@@ -1,7 +1,10 @@
 from actuators import Motor
 from layer import Layer
 from mechanisms import Wheel
-from task import AxialMovementTask, TankDriveTask, TurnTask, UnsupportedTaskError
+from task.drive import AxialMovementTask
+from task.drive import TankDriveTask
+from task.drive import TurnTask
+from task import UnsupportedTaskError
 from units import convert
 from math import copysign
 from layer import LayerSetupInfo
