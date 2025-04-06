@@ -6,7 +6,6 @@ from mechanisms import Wheel
 from task.drive import AxialMovementTask
 from task.drive import TankDriveTask
 from task.drive import TurnTask
-from task import UnsupportedTaskError
 from units import convert
 
 
@@ -74,10 +73,10 @@ class TwoWheelDrive(Layer):
         self._should_request_task = True
 
     def get_input_tasks(self):
-        return [AxialMovementTask, TurnTask, TankDriveTask]
+        return {AxialMovementTask, TurnTask, TankDriveTask}
 
     def get_output_tasks(self):
-        return []
+        return set()
 
     def process(self, ctx):
         if self._should_request_task:
