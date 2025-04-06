@@ -20,11 +20,11 @@ class LiftTask(Task):
         if raise_lift and lower_lift:
             raise ValueError("Cannot simultaneously fully raise and lower the lift in an arc.")
 
-        self.swing = swing
-        self.full_extend = full_extend
-        self.full_retract = full_retract
-        self.raise_lift = raise_lift
-        self.lower_lift = lower_lift
+        self._swing = swing
+        self._full_extend = full_extend
+        self._full_retract = full_retract
+        self._raise_lift = raise_lift
+        self._lower_lift = lower_lift
 
 
 class LiftTeleopTask(Task):
@@ -40,8 +40,8 @@ class LiftTeleopTask(Task):
         :param extension: The direction and speed the lift should extend with.
                           Must be in the range [-1, 1]. Negative values indicate retraction.
         """
-        self.swing = swing
-        self.extension = extension
+        self._swing = swing
+        self._extension = extension
 
 
 class TowerForearmTask(Task):
@@ -69,8 +69,8 @@ class TowerForearmTask(Task):
         if full_raise and full_lower:
             raise ValueError("The arm can't be both fully raised and fully lowered")
 
-        self.full_raise = full_raise
-        self.full_lower = full_lower
+        self._full_raise = full_raise
+        self._full_lower = full_lower
 
     def get_full_raise(self) -> bool:
         """
@@ -78,7 +78,7 @@ class TowerForearmTask(Task):
 
         :return: whether the tower should be fully raised in an arc.
         """
-        return self.full_raise
+        return self._full_raise
 
     def get_full_lower(self) -> bool:
         """
@@ -86,7 +86,7 @@ class TowerForearmTask(Task):
 
         :return: whether the tower should be fully lowered in an arc.
         """
-        return self.full_lower
+        return self._full_lower
 
 
 class TowerTeleopTask(Task):
@@ -101,8 +101,8 @@ class TowerTeleopTask(Task):
         :param tower_swing_power: the direction and speed to swing the tower in.
         :param forearm_swing_power: the direction and speed to swing the forearm in.
         """
-        self.tower_swing_power = tower_swing_power
-        self.forearm_swing_power = forearm_swing_power
+        self._tower_swing_power = tower_swing_power
+        self._forearm_swing_power = forearm_swing_power
 
     def get_tower_swing_power(self) -> float:
         """
@@ -111,7 +111,7 @@ class TowerTeleopTask(Task):
         :return: the direction and speed to swing the tower in. Negative values lower the tower
                  (towards the front of the robot).
         """
-        return self.tower_swing_power
+        return self._tower_swing_power
 
     def get_forearm_swing_power(self) -> float:
         """
@@ -120,4 +120,4 @@ class TowerTeleopTask(Task):
         :return: the direction and speed to swing the forearm in. Negative values lower the forearm
                  (towards the front of the robot if the tower is fully lowered).
         """
-        return self.forearm_swing_power
+        return self._forearm_swing_power

@@ -13,7 +13,7 @@ class MoveToFieldTask:
 
         :param transform: the goal field space transform.
         """
-        self.transform = transform
+        self._transform = transform
 
     def get_goal_transform(self) -> Mat3:
         """
@@ -21,5 +21,5 @@ class MoveToFieldTask:
 
         :return: The goal field space transform.
         """
-        return self.transform
+        return self._transform
 

@@ -36,7 +36,7 @@ class TurnTask(Task):
 
         :param angle: the angle in radians to turn the robot counterclockwise.
         """
-        self.angle = angle
+        self._angle = angle
 
     def get_angle(self) -> float:
         """
@@ -45,7 +45,7 @@ class TurnTask(Task):
         :return: the angle in radians to turn the robot counterclockwise. Negative values indicate
                  clockwise turns.
         """
-        return self.angle
+        return self._angle
 
 
 class LinearMovementTask(Task):
@@ -62,22 +62,22 @@ class LinearMovementTask(Task):
         :param lateral: The distance to move in the rightward direction (meters).
                         Negative values indicate leftward movement.
         """
-        self.axial = axial
-        self.lateral = lateral
+        self._axial = axial
+        self._lateral = lateral
 
     def get_axial(self) -> float:
         """
         Returns the distance in meters to move in the forward direction.
         Negative values indicate backward movement.
         """
-        return self.axial
+        return self._axial
 
     def get_lateral(self) -> float:
         """
         Returns the distance in meters to move in the robot's rightward direction.
         Negative values indicate leftward movement.
         """
-        return self.lateral
+        return self._lateral
 
 
 class HolonomicDriveTask(Task):
@@ -98,28 +98,28 @@ class HolonomicDriveTask(Task):
         :param yaw: The relative acceleration to use to turn the robot.
                     Positive values indicate counterclockwise turning, and negative values indicate clockwise.
         """
-        self.axial = axial
-        self.lateral = lateral
-        self.yaw = yaw
+        self._axial = axial
+        self._lateral = lateral
+        self._yaw = yaw
 
     def get_axial(self) -> float:
         """
         Returns the relative acceleration to apply in the direction the robot is facing.
         """
-        return self.axial
+        return self._axial
 
     def get_lateral(self) -> float:
         """
         Returns the relative acceleration to apply in the perpendicular direction
         to the one the robot is facing.
         """
-        return self.lateral
+        return self._lateral
 
     def get_yaw(self) -> float:
         """
         Returns the relative acceleration to use to turn the robot.
         """
-        return self.yaw
+        return self._yaw
 
 
 class TankDriveTask(Task):
@@ -135,8 +135,8 @@ class TankDriveTask(Task):
         :param left: the relative acceleration to apply to the left side of the robot.
         :param right: the relative acceleration to apply to the right side of the robot.
         """
-        self.left = left
-        self.right = right
+        self._left = left
+        self._right = right
 
     def get_left(self) -> float:
         """
@@ -145,7 +145,7 @@ class TankDriveTask(Task):
         :return: the relative acceleration to apply to the left side of the robot. Positive values
                  indicate forward movement and negative values indicate backward.
         """
-        return self.left
+        return self._left
 
     def get_right(self) -> float:
         """
@@ -154,5 +154,5 @@ class TankDriveTask(Task):
         :return: the relative acceleration to apply to the right side of the robot. Positive values
                  indicate forward movement and negative values indicate backward.
         """
-        return self.right
+        return self._right
 
