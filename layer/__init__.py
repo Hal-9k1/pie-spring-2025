@@ -1,28 +1,29 @@
 from abc import ABC
 from abc import abstractmethod
+from task import Task
 from task import WinTask
 
 class Layer(ABC):
-    def setup(self, setup_info):
+    def setup(self, setup_info: LayerSetupInfo) -> None:
         pass
 
     @abstractmethod
-    def get_input_tasks(self):
+    def get_input_tasks(self) -> set[Task]:
         raise NotImplementedError
 
     @abstractmethod
-    def get_output_tasks(self):
+    def get_output_tasks(self) -> set[Task]:
         raise NotImplementedError
 
-    def subtask_completed(self, task):
+    def subtask_completed(self, task: Task) -> None:
         pass
 
     @abstractmethod
-    def process(self, ctx):
+    def process(self, ctx: LayerProcessContext) -> None:
         raise NotImplementedError
 
     @abstractmethod
-    def accept_task(self, task):
+    def accept_task(self, task: Task) -> None:
         raise NotImplementedError
 
 
@@ -188,6 +189,7 @@ class WinLayer(Task):
         if not self._emitted_win:
             ctx.emit_subtask(WinTask())
         if self._completed_win:
+            ctx.complete_task(None)
 
     def accept_task(self, task):
         raise ValueError
