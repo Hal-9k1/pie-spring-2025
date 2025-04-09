@@ -85,12 +85,28 @@ class TestLayerGraphRelations(TestCase):
 
 
 class TestRobotController(TestCase):
-    def _setup_with_layers(self, layers):
-        self._rc = RobotController()
-        self._rc.setup(None, None, layers, None, None, LoggerProvider())
+    def setUp(self):
+        self._lg = LayerGraph()
 
-    def test_queued_chain(self):
-        pass
+    def _create_rc(self):
+        self._rc = RobotController()
+        self._rc.setup(None, None, self._lg, None, None, LoggerProvider())
+
+    def test_chain(self):
+        c = CollectLayer()
+        self._lg.add_chain([
+            EmitterLayer([WinTask()]),
+            FlatMapLayer({
+                WinTask: [GameActionTask(), GameActionTask()],
+            }),
+            c
+        ])
+        for _ in range(100):
+            if self._rc.update():
+                break
+        else:
+            self.fail('Program did not complete in 100 updates.')
+        self.assertEqual([GameActionTask, GameActionTask], [type(t) for t in c.collect()])
 
 
 class TestLayer(Layer):
@@ -110,12 +126,12 @@ class TestLayer(Layer):
         raise NotImplementedError
 
 
-class OutputOnlyLayer(_TestLayer):
+class OutputOnlyLayer(TestLayer):
     def get_input_tasks(self):
         return set()
 
 
-class InputOnlyLayer(_TestLayer):
+class InputOnlyLayer(TestLayer):
     def get_output_tasks(self):
         return set()
 
@@ -126,7 +142,7 @@ class CollectLayer(Layer):
         self._task = None
 
     def get_input_tasks(self):
-        return {Task]
+        return {Task}
 
     def get_output_tasks(self):
         return set()
@@ -140,6 +156,9 @@ class CollectLayer(Layer):
     def accept_task(self, task):
         self._task = task
         self._tasks.append(task)
+
+    def collect(self):
+        return self._task
 
 
 class FlatMapLayer(Layer):
@@ -203,3 +222,24 @@ class EmitterLayer(Layer):
 
     def accept_task(self, task):
         raise TypeError
+
+class VisionTask(Task):
+    pass
+
+class WinTask(Task):
+    pass
+
+class GameActionTask(Task):
+    pass
+
+class PathfindTask(Task):
+    pass
+
+class RouteTask(Task):
+    pass
+
+class DriveTask(Task):
+    pass
+
+class PeripheralTask(Task):
+    pass
