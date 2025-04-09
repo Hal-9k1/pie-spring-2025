@@ -84,6 +84,8 @@ class AbstractFunctionLayer(Layer):
         if self._subtask_completed:
             if self._task:
                 ctx.complete_task(self._task)
+                self._task = None
+            ctx.request_task()
         if not self._emitted_subtask:
             ctx.emit_subtask(self._subtask)
             self._emitted_subtask = True
@@ -117,6 +119,8 @@ class AbstractQueuedLayer(Layer):
         if not self._subtask_iter:
             if self._task:
                 ctx.complete_task(self._task)
+                self._task = None
+            ctx.request_task()
         if self._next_subtask:
             ctx.emit_subtask(self._next_subtask)
             self._next_subtask = None
