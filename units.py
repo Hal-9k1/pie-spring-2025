@@ -1,3 +1,5 @@
+import math
+
 _units_per_standard = {
     'mm': 1000,
     'cm': 100,
@@ -38,5 +40,3 @@ def convert(value, from_unit, to_unit):
     if _unit_types[from_unit] != _unit_types[to_unit]:
         raise ValueError(f'Cannot convert from {_unit_types[from_unit]} unit to { _unit_types[to_unit]} unit')
     return value * _units_per_standard[to_unit] / _units_per_standard[from_unit]
-
-

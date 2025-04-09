@@ -92,7 +92,33 @@ class TestRobotController(TestCase):
         self._rc = RobotController()
         self._rc.setup(None, None, self._lg, None, None, LoggerProvider())
 
-    def test_chain(self):
+    def _test_rc(self):
+        self._create_rc()
+        for _ in range(100):
+            if self._rc.update():
+                break
+        else:
+            self.fail('Program did not complete in 100 updates.')
+
+    def _check_collector(self, c, types):
+        self.assertEqual(types, [type(t) for t in c.collect()])
+
+    def _check_collector_unordered(self, c, types):
+        unique = {t for t in types}
+        collected = c.collect()
+        for t in unique:
+            self.assertEqual(collected.count(t), types.count(t))
+
+    def test_direct(self):
+        c = CollectLayer()
+        self._lg.add_chain([
+            EmitterLayer([WinTask()]),
+            c
+        ])
+        self._test_rc()
+        self._check_collector(c, [WinTask])
+
+    def test_short_chain(self):
         c = CollectLayer()
         self._lg.add_chain([
             EmitterLayer([WinTask()]),
@@ -101,12 +127,45 @@ class TestRobotController(TestCase):
             }),
             c
         ])
-        for _ in range(100):
-            if self._rc.update():
-                break
-        else:
-            self.fail('Program did not complete in 100 updates.')
-        self.assertEqual([GameActionTask, GameActionTask], [type(t) for t in c.collect()])
+        self._test_rc()
+        self._check_collector(c, [GameActionTask] * 2)
+
+    def test_chain(self):
+        c = CollectLayer()
+        self._lg.add_chain([
+            EmitterLayer([WinTask()]),
+            FlatMapLayer({
+                WinTask: [GameActionTask(), GameActionTask()],
+            }),
+            FlatMapLayer({
+                GameActionTask: [PeripheralTask(), PathfindTask()],
+            }),
+            c
+        ])
+        self._test_rc()
+        self._check_collector(c, [PeripheralTask, PathfindTask] * 2)
+
+    def test_split(self):
+        peripheral_layer = CollectLayer(input_tasks={PeripheralTask})
+        drive_layer = CollectLayer(input_tasks={DriveTask})
+        snooper_layer = CollectLayer()
+
+        game_action_layer = FlatMapLayer({
+            GameActionTask: [PeripheralTask(), DriveTask()],
+        })
+        self._lg.add_chain([
+            EmitterLayer([WinTask()]),
+            FlatMapLayer({
+                WinTask: [GameActionTask(), GameActionTask()],
+            }),
+            game_action_layer,
+            snooper_layer,
+        ])
+        self._lg.add_connection(game_action_layer, peripheral_layer)
+        self._test_rc()
+        self._check_collector(peripheral_layer, [PeripheralTask] * 2)
+        self._check_collector(drive_layer, [DriveTask] * 2)
+        self._check_collector_unordered(snooper_layer, [PeripheralTask, DriveTask] * 2)
 
 
 class TestLayer(Layer):
@@ -137,12 +196,13 @@ class InputOnlyLayer(TestLayer):
 
 
 class CollectLayer(Layer):
-    def __init__(self):
+    def __init__(self, input_tasks=None):
         self._tasks = []
         self._task = None
+        self._input_tasks = input_tasks or {Task}
 
     def get_input_tasks(self):
-        return {Task}
+        return self._input_tasks
 
     def get_output_tasks(self):
         return set()
@@ -219,6 +279,39 @@ class EmitterLayer(Layer):
                 ctx.emit_subtask(subtask)
             else:
                 ctx.request_task()
+
+    def accept_task(self, task):
+        raise TypeError
+
+class ConcurrentEmitterLayer(Layer):
+    def __init__(self, groups):
+        self._groups = iter(groups)
+        self._task_types = {type(t) for g in groups for t in g}
+        self._task = None
+        self._should_emit = True
+
+    def get_input_tasks(self):
+        return set()
+
+    def get_output_tasks(self):
+        return self._task_types
+
+    def subtask_completed(self, task):
+        if task in self._pending:
+            self._pending.remove(task)
+
+    def process(self, ctx):
+        if not self._pending:
+            self._pending = next(self._groups, None)
+            if not self._pending:
+                if self._task:
+                    ctx.complete_task(self._task)
+                    self._task = None
+                ctx.request_task()
+        if self._should_emit:
+            self._should_emit = False
+            for t in self._pending:
+                ctx.emit_subtask(t)
 
     def accept_task(self, task):
         raise TypeError

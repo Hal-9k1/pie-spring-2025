@@ -1,3 +1,4 @@
+from abc import abstractmethod
 from actuators import Motor
 from layer import Layer
 from layer import LayerSetupInfo
@@ -42,7 +43,7 @@ class TwoWheelDrive(Layer):
     def accept_task(self, task):
         raise NotImplementedError
 
-    def setup(self, init_info):
+    def setup(self, setup_info):
         self._right_wheel = Wheel(
             setup_info.get_logger('Right wheel'),
             Motor(

@@ -1,4 +1,6 @@
 from layer import Layer
+from layer import LayerSetupInfo
+from layer import LayerProcessContext
 
 class LayerGraph:
     def __init__(self):
@@ -100,11 +102,11 @@ class RobotController:
         self._update_listeners = []
         self._teardown_listeners = []
 
-    def update():
+    def update(self):
         self._logger.trace('Begin update')
         for listener in self._update_listeners:
             listener()
-        if layers == None:
+        if self._layers == None:
             return True
 
         hot = self._layers.get_sinks()

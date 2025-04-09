@@ -6,6 +6,7 @@ from task import WinTask
 
 class LayerSetupInfo:
     def __init__(self, robot, robot_controller, robot_localizer, gamepad, keyboard, logger_provider):
+        self._robot = robot
         self._robot_controller = robot_controller
         self._robot_localizer = robot_localizer
         self._gamepad = gamepad
@@ -35,15 +36,18 @@ class LayerSetupInfo:
 
 
 class LayerProcessContext:
-    def __init__(self, emit_subtask_hook, complete_task_hook):
+    def __init__(self, emit_subtask_hook, complete_task_hook, request_task_hook):
         self._emit_subtask_hook = emit_subtask_hook
-        self._complete_task_hook = complete_task_gook
+        self._complete_task_hook = complete_task_hook
 
     def emit_subtask(self, subtask):
         self._emit_subtask_hook(subtask)
 
     def complete_task(self, task):
         self._complete_task_hook()
+
+    def request_task(self):
+        self._request_task_hook()
 
 
 class Layer(ABC):
@@ -176,7 +180,7 @@ class SequenceLayer(Layer):
         return f'SequenceLayer({[str(l) for l in self._layers]})'
 
 
-class WinLayer(Task):
+class WinLayer(Layer):
     def __init__(self):
         self._emitted_win = False
         self._completed_win = False

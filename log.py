@@ -1,7 +1,10 @@
-from abc import *
+from abc import ABC
+from abc import abstractmethod
 from inspect import currentframe
 from datetime import datetime
 from ioutil import write_flexible_string
+from sys import stderr
+from sys import stdout
 
 class Log:
     def __init__(self, severity, label, location, msg):
@@ -36,16 +39,16 @@ class Logger:
         self._report_timestamps_filter = report_timestamps_filter
 
     def error(self, *args):
-        self._do_log(True, ERROR_SEVERITY, args)
+        self._do_log(True, Logger.ERROR_SEVERITY, args)
 
     def warn(self, *args):
-        self._do_log(True, WARN_SEVERITY, args)
+        self._do_log(True, Logger.WARN_SEVERITY, args)
 
     def info(self, *args):
-        self._do_log(True, INFO_SEVERITY, args)
+        self._do_log(True, Logger.INFO_SEVERITY, args)
 
     def trace(self, *args):
-        self._do_log(True, TRACE_SEVERITY, args)
+        self._do_log(True, Logger.TRACE_SEVERITY, args)
 
     def log_severity(self, severity, *args):
         self._do_log(True, severity, args)
@@ -108,6 +111,27 @@ class LoggerBackend(ABC):
         pass
 
 
+class StdioBackend(LoggerBackend):
+    def process_position(self, logger_label, item_label, position):
+        pass
+
+    def process_vector(self, logger_label, item_label, attach_label, vector):
+        pass
+
+    def process_transform(self, logger_label, item_label, attach_label, transform):
+        pass
+
+    def process_updatable_object(self, logger_label, item_label, value):
+        pass
+
+    def process_log(self, log):
+        if log._severity in (Logger.ERROR_SEVERITY, Logger.WARN_SEVERITY):
+            f = stderr
+        else:
+            f = stdout
+        print(log.get_message(), file=f)
+
+
 class LoggerProvider:
     def __init__(self):
         self._backends = []
@@ -127,6 +151,7 @@ class LoggerProvider:
         copy._timestamp_exceptions = self._timestamp_exceptions
         copy._use_location = self._use_location
         copy._location_exceptions = self._location_exceptions
+        return copy
 
     def get_logger(self, label):
         backend = None
@@ -160,19 +185,19 @@ class LoggerProvider:
         return self
 
     def default_severity_error(self):
-        self._default_severity_name = ERROR_SEVERITY
+        self._default_severity_name = Logger.ERROR_SEVERITY
         return self
 
     def default_severity_warn(self):
-        self._default_severity_name = WARN_SEVERITY
+        self._default_severity_name = Logger.WARN_SEVERITY
         return self
 
     def default_severity_info(self):
-        self._default_severity_name = INFO_SEVERITY
+        self._default_severity_name = Logger.INFO_SEVERITY
         return self
 
     def default_severity_trace(self):
-        self._default_severity_name = TRACE_SEVERITY
+        self._default_severity_name = Logger.TRACE_SEVERITY
         return self
 
     def use_default_severity_only(self, enable):
@@ -189,19 +214,19 @@ class LoggerProvider:
         return self
 
     def except_timestamp_error(self):
-        self._timestamp_exceptions.add(ERROR_SEVERITY)
+        self._timestamp_exceptions.add(Logger.ERROR_SEVERITY)
         return self
 
     def except_timestamp_warn(self):
-        self._timestamp_exceptions.add(WARN_SEVERITY)
+        self._timestamp_exceptions.add(Logger.WARN_SEVERITY)
         return self
 
     def except_timestamp_info(self):
-        self._timestamp_exceptions.add(INFO_SEVERITY)
+        self._timestamp_exceptions.add(Logger.INFO_SEVERITY)
         return self
 
     def except_timestamp_trace(self):
-        self._timestamp_exceptions.add(TRACE_SEVERITY)
+        self._timestamp_exceptions.add(Logger.TRACE_SEVERITY)
         return self
 
     def location(self, enable):
@@ -214,19 +239,19 @@ class LoggerProvider:
         return self
 
     def except_location_error(self):
-        self._location_exceptions.add(ERROR_SEVERITY)
+        self._location_exceptions.add(Logger.ERROR_SEVERITY)
         return self
 
     def except_location_warn(self):
-        self._location_exceptions.add(WARN_SEVERITY)
+        self._location_exceptions.add(Logger.WARN_SEVERITY)
         return self
 
     def except_location_info(self):
-        self._location_exceptions.add(INFO_SEVERITY)
+        self._location_exceptions.add(Logger.INFO_SEVERITY)
         return self
 
     def except_location_trace(self):
-        self._location_exceptions.add(TRACE_SEVERITY)
+        self._location_exceptions.add(Logger.TRACE_SEVERITY)
         return self
 
 
