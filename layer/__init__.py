@@ -3,29 +3,6 @@ from abc import abstractmethod
 from task import Task
 from task import WinTask
 
-class Layer(ABC):
-    def setup(self, setup_info: LayerSetupInfo) -> None:
-        pass
-
-    @abstractmethod
-    def get_input_tasks(self) -> set[Task]:
-        raise NotImplementedError
-
-    @abstractmethod
-    def get_output_tasks(self) -> set[Task]:
-        raise NotImplementedError
-
-    def subtask_completed(self, task: Task) -> None:
-        pass
-
-    @abstractmethod
-    def process(self, ctx: LayerProcessContext) -> None:
-        raise NotImplementedError
-
-    @abstractmethod
-    def accept_task(self, task: Task) -> None:
-        raise NotImplementedError
-
 
 class LayerSetupInfo:
     def __init__(self, robot, robot_controller, robot_localizer, gamepad, keyboard, logger_provider):
@@ -67,6 +44,30 @@ class LayerProcessContext:
 
     def complete_task(self, task):
         self._complete_task_hook()
+
+
+class Layer(ABC):
+    def setup(self, setup_info: LayerSetupInfo) -> None:
+        pass
+
+    @abstractmethod
+    def get_input_tasks(self) -> set[Task]:
+        raise NotImplementedError
+
+    @abstractmethod
+    def get_output_tasks(self) -> set[Task]:
+        raise NotImplementedError
+
+    def subtask_completed(self, task: Task) -> None:
+        pass
+
+    @abstractmethod
+    def process(self, ctx: LayerProcessContext) -> None:
+        raise NotImplementedError
+
+    @abstractmethod
+    def accept_task(self, task: Task) -> None:
+        raise NotImplementedError
 
 
 class AbstractFunctionLayer(Layer):

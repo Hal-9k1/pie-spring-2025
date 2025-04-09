@@ -1,3 +1,5 @@
+from layer import Layer
+
 class LayerGraph:
     def __init__(self):
         self._parents = {}
@@ -14,7 +16,7 @@ class LayerGraph:
             raise TypeError(f'Output tasks of {a} is not a set')
         if not isinstance(child_ins, set):
             raise TypeError(f'Input tasks of {b} is not a set')
-        if not parent_outs.isdisjoint(child_ins):
+        if parent_outs.isdisjoint(child_ins):
             raise TypeError(f'Parent {a} and child {b} share no compatible task interface')
 
         if a not in self._children:
@@ -36,13 +38,14 @@ class LayerGraph:
                 raise TypeError
         except TypeError:
             raise ValueError('Parameter must be an iterable of two-element iterables')
-        self._connections.extend((c[0], c[1]) for c in connections)
+        for c in connections:
+            self.add_connection(*c)
 
     def add_chain(self, chain):
         if len(chain) < 2:
             raise ValueError('Parameter must have at least two elements')
-        for connection in zip(chain[:-1], chain[1:]):
-            self.add_connection(connection)
+        for a, b in zip(chain[:-1], chain[1:]):
+            self.add_connection(a, b)
 
     def get_verts(self):
         return {e for l in (self._parents.keys(), *self._parents.values()) for e in l}
@@ -54,10 +57,10 @@ class LayerGraph:
         return self._parents.get(vertex, set())
 
     def get_sources(self):
-        return {v in self.get_verts() if v not in self._parents}
+        return {v for v in self.get_verts() if v not in self._parents}
 
     def get_sinks(self):
-        return {v in self.get_verts() if v not in self._children}
+        return {v for v in self.get_verts() if v not in self._children}
 
     def _check_cyclic(self, start):
         visited = set()
@@ -70,7 +73,7 @@ class LayerGraph:
                 if child in visited:
                     continue
                 visited.add(child)
-                stack.append([child, iter(self._children.get(child, [])]))
+                stack.append([child, iter(self._children.get(child, []))])
             else:
                 del stack[-1]
         return False
@@ -139,7 +142,6 @@ class RobotController:
                 self._layers = None
                 return True
         return False
-    }
 
     def add_update_listener(self, listener):
         self._update_listeners.append(listener)
