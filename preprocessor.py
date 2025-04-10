@@ -113,7 +113,7 @@ def process_file(file_path, indent=" " * 4, module_name=None, module_list=None, 
                     import_line += f"{words[3]} = _HELPER_Module('{imported_module_name}')"
                 elif import_mode == "from import":
                     if words[3] == "*":
-                        import_line += f"exec(\"for k, v in {module_exports}.items(): exec(k + \\\" = v\\\")\")"
+                        import_line += f"exec(\"[exec(k + ' = v') for k, v in {module_exports}.items() if not k.startswith('__')]\")"
                     else:
                         import_line += f"{words[3]} = {module_exports}[\"{words[3]}\"]"
                 elif import_mode == "from import as":
