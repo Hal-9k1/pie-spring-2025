@@ -39,6 +39,7 @@ class LayerProcessContext:
     def __init__(self, emit_subtask_hook, complete_task_hook, request_task_hook):
         self._emit_subtask_hook = emit_subtask_hook
         self._complete_task_hook = complete_task_hook
+        self._request_task_hook = request_task_hook
 
     def emit_subtask(self, subtask):
         self._emit_subtask_hook(subtask)

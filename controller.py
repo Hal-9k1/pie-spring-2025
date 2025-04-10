@@ -88,8 +88,8 @@ class RobotController:
     def setup(self, robot, localizer, layers, gamepad, keyboard, logger_provider, debug_mode=False):
         self._logger = logger_provider.get_logger("RobotController")
         setup_info = LayerSetupInfo(
-            self,
             robot,
+            self,
             localizer,
             gamepad,
             keyboard,
@@ -110,40 +110,48 @@ class RobotController:
             return True
 
         hot = self._layers.get_sinks()
+        all_escalated = True
 
         while hot:
             layer = hot.pop()
             self._logger.trace(f'Now processing {str(layer)}')
             completed_tasks = []
             subtasks = []
+            escalate = False
+            parents = self._layers.get_parents(layer)
 
-            # need to add request_task back so sublayer that has already marked task as completed
-            # can still pass control upwards in subsequent updates
+            def do_escalate():
+                nonlocal escalate
+                escalate = True
+
             ctx = LayerProcessContext(
-                lambda t: subtasks.append(subtask),
-                lambda t: completed_tasks.append(t)
+                lambda t: subtasks.append(t),
+                lambda t: completed_tasks.append(t),
+                do_escalate
             )
             layer.process(ctx)
 
             for task in completed_tasks:
-                for parent in self._layers.get_parents(layer):
+                for parent in parents:
                     if any(isinstance(task, cls) for cls in parent.get_output_tasks()):
                         parent.subtask_completed(task)
-                        hot.add(parent)
-
             for task in subtasks:
                 for child in self._layers.get_children(layer):
                     if any(isinstance(task, cls) for cls in child.get_input_tasks()):
                         child.accept_task(task)
 
-            if escalate and not self._layers.get_parents(layer):
-                for listener in self._teardown_listeners:
-                    listener()
-                self._update_listeners = []
-                self._teardown_listeners = []
-                self._layers = None
-                return True
-        return False
+            if escalate:
+                hot.update(parents)
+            else:
+                all_escalated = False
+
+        if all_escalated:
+            for listener in self._teardown_listeners:
+                listener()
+            self._update_listeners = []
+            self._teardown_listeners = []
+            self._layers = None
+        return all_escalated
 
     def add_update_listener(self, listener):
         self._update_listeners.append(listener)
