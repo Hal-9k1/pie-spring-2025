@@ -49,7 +49,7 @@ class AbstractOpmode(ABC):
 
         while True:
             if controller.update():
-                logger.log('Opmode finished.')
+                logger.info('Opmode finished.')
                 break
 
 
@@ -72,5 +72,6 @@ class SampleProgrammedDriveLayer(AbstractQueuedLayer):
     def get_output_tasks(self):
         return {TurnTask, AxialMovementTask}
 
-    def map_to_subtasks(self):
+    def map_to_subtasks(self, task):
+        assert(isinstance(task, WinTask))
         return [AxialMovementTask(1), TurnTask(math.pi / 2)] * 4

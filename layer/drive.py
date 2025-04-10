@@ -31,18 +31,6 @@ class TwoWheelDrive(Layer):
         self._right_goal_delta = 0
         self._current_task_done = True
 
-
-    def subtask_completed(self, task):
-        pass
-
-    @abstractmethod
-    def process(self, ctx):
-        raise NotImplementedError
-
-    @abstractmethod
-    def accept_task(self, task):
-        raise NotImplementedError
-
     def setup(self, setup_info):
         self._right_wheel = Wheel(
             setup_info.get_logger('Right wheel'),
@@ -97,18 +85,18 @@ class TwoWheelDrive(Layer):
     def accept_task(self, task):
         if isinstance(task, TankDriveTask):
             self._should_request_task = True
-            max_abs_power = max(abs(task.left), abs(task.right), 1)
+            max_abs_power = max(abs(task.get_left()), abs(task.get_right()), 1)
             self._left_wheel.set_velocity(task.left / max_abs_power)
             self._right_wheel.set_velocity(task.right / max_abs_power)
         elif isinstance(task, AxialMovementTask):
             self._should_request_task = False
-            self._left_goal_delta = task.distance * self.GEAR_RATIO * self.SLIPPING_CONSTANT
-            self._right_goal_delta = task.distance * self.GEAR_RATIO * self.SLIPPING_CONSTANT
+            self._left_goal_delta = task.get_distance() * self.GEAR_RATIO * self.SLIPPING_CONSTANT
+            self._right_goal_delta = task.get_distance() * self.GEAR_RATIO * self.SLIPPING_CONSTANT
         elif isinstance(task, TurnTask):
             self._should_request_task = False
-            self._left_goal_delta = (-task.angle * self.WHEEL_SPAN_RADIUS * self.GEAR_RATIO
+            self._left_goal_delta = (-task.get_angle() * self.WHEEL_SPAN_RADIUS * self.GEAR_RATIO
                 * self.SLIPPING_CONSTANT)
-            self._right_goal_delta = (task.angle * self.WHEEL_SPAN_RADIUS * self.GEAR_RATIO
+            self._right_goal_delta = (task.get_angle() * self.WHEEL_SPAN_RADIUS * self.GEAR_RATIO
                 * self.SLIPPING_CONSTANT)
 
         if not self._should_request_task:
