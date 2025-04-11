@@ -1,6 +1,8 @@
 from challenges import *
 import opmodes
 from mockrobot import MockRobot
+from log import FilterBackend
+from log import Logger
 from log import LoggerProvider
 from log import StdioBackend
 
@@ -17,7 +19,9 @@ def get_robot_interfaces(use_input, robot_spec):
     keyboard = None
 
     logger_provider = LoggerProvider()
-    logger_provider.add_backend(StdioBackend())
+    logger_provider.add_backend(
+        FilterBackend(StdioBackend(), True).add_exception(Logger.TRACE_SEVERITY)
+    )
 
     try:
         Robot

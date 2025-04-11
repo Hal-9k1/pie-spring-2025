@@ -132,6 +132,35 @@ class StdioBackend(LoggerBackend):
         print(log.get_message(), file=f)
 
 
+class FilterBackend(LoggerBackend):
+    def __init__(self, inner, default_setting):
+        self._inner = inner
+        self._exceptions = set()
+        self._default_setting = default_setting
+        self._filter = _SeverityFilter(default_setting, set())
+
+    def add_exception(self, exception):
+        self._exceptions.add(exception)
+        self._filter = _SeverityFilter(self._default_setting, self._exceptions)
+        return self
+
+    def process_position(self, logger_label, item_label, position):
+        self._inner.process_position(logger_label, item_label, position)
+
+    def process_vector(self, logger_label, item_label, attach_label, vector):
+        self._inner.process_vector(self, logger_label, item_label, attach_label, vector)
+
+    def process_transform(self, logger_label, item_label, attach_label, transform):
+        self._inner.process_transform(self, logger_label, item_label, attach_label, transform)
+
+    def process_updatable_object(self, logger_label, item_label, value):
+        self._inner.process_updatable_object(self, logger_label, item_label, value)
+
+    def process_log(self, log):
+        if self._filter.permit(log._severity):
+            self._inner.process_log(log)
+
+
 class LoggerProvider:
     def __init__(self):
         self._backends = []
