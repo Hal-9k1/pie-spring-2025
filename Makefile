@@ -5,14 +5,19 @@ eq = $(and $(findstring $(1),$(2)),$(findstring $(2),$(1)))
 build_module := mainbuild
 build_name := $(build_module).py
 
-.PHONY: all test simulate copy clean
+.PHONY: all test simauto simteleop simulate copy clean
 all: $(build_name)
 
 test:
 	python -m unittest discover -s tests -t . -p '*.py'
 
-simulate: $(build_name)
-	python simulate_auto.py $(build_module)
+simulate: simauto
+
+simteleop: $(build_name)
+	python simulate.py mainbuild teleop
+
+simauto: $(build_name)
+	python simulate.py mainbuild autonomous
 
 copy: $(build_name)
 	vim -c 'normal ggvG$$"+y' -c ':q' $<

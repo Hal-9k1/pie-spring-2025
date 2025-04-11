@@ -40,7 +40,7 @@ class Buttons:
         self.y = y
 
 
-class GamepadInput:
+class GamepadInputTask:
     """Represents the input state of a gamepad."""
     TRIGGER_MIN = 0.3  # Threshold for triggers to be considered "pressed"
 
@@ -65,13 +65,17 @@ class GamepadInput:
     ):
         self.joysticks = Joysticks(Joystick(joystick_left_x, joystick_left_y), Joystick(joystick_right_x, joystick_right_y))
         self.bumpers = ButtonPair(bumper_left, bumper_right)
-        self.triggers = ButtonPair(trigger_left >= self.TRIGGER_MIN, trigger_right >= self.TRIGGER_MIN)
+        self.triggers = ButtonPair(
+            trigger_left if isinstance(trigger_left, bool) else trigger_left >= self.TRIGGER_MIN,
+            trigger_right if isinstance(trigger_right, bool) else trigger_right >= self.TRIGGER_MIN
+        )
         self.dpad = DirectionalPad(dpad_up, dpad_right, dpad_down, dpad_left)
         self.buttons = Buttons(button_a, button_b, button_x, button_y)
 
 
-class GamepadInputTask:
-    """Holds a snapshot of input from all connected gamepads."""
-    def __init__(self, gamepad0: GamepadInput = None, gamepad1: GamepadInput = None):
-        self.gamepad0 = gamepad0
-        self.gamepad1 = gamepad1
+class KeyboardInputTask:
+    def __init__(self, input_dict):
+        self._input_dict = input_dict
+
+    def get(self, key):
+        return self._input_dict[key]

@@ -1,3 +1,4 @@
+from abc import abstractmethod
 from actuators import Motor
 from layer import Layer
 from layer import LayerSetupInfo
@@ -6,7 +7,6 @@ from mechanisms import Wheel
 from task.drive import AxialMovementTask
 from task.drive import TankDriveTask
 from task.drive import TurnTask
-from task import UnsupportedTaskError
 from units import convert
 
 
@@ -31,14 +31,14 @@ class TwoWheelDrive(Layer):
         self._right_goal_delta = 0
         self._current_task_done = True
 
-    def setup(self, init_info):
+    def setup(self, setup_info):
         self._right_wheel = Wheel(
             setup_info.get_logger('Right wheel'),
             Motor(
                 setup_info.get_robot(),
                 setup_info.get_logger('Right wheel motor'),
                 self.RIGHT_DRIVE_MOTOR_NAME,
-                'insert a or b here'
+                'a'
             ),
             self.WHEEL_RADIUS,
             self.INTERNAL_GEARING
@@ -49,58 +49,66 @@ class TwoWheelDrive(Layer):
                 setup_info.get_robot(),
                 setup_info.get_logger('Left wheel motor'),
                 self.LEFT_DRIVE_MOTOR_NAME,
-                'insert a or b here'
+                'b'
             ),
             self.WHEEL_RADIUS,
             self.INTERNAL_GEARING
         )
+        self._logger = setup_info.get_logger('TwoWheelDrive')
+        self._is_direct_control = True
         self._left_start_pos = 0
         self._right_start_pos = 0
         self._left_goal_delta = 0
         self._right_goal_delta = 0
-        self._current_task_done = True
+        self._should_request_task = True
+        self._task = None
 
-    def is_task_done(self):
-        return self._current_task_done
+    def get_input_tasks(self):
+        return {AxialMovementTask, TurnTask, TankDriveTask}
 
-    def update(self, completed):
-        left_delta = self._left_wheel.get_distance() - self._left_start_pos
-        left_done = ((left_delta < 0) == (self._left_goal_delta < 0)
-            and abs(left_delta) >= abs(self._left_goal_delta))
-        right_delta = self._right_wheel.get_distance() - self._right_start_pos
-        right_done = ((right_delta < 0) == (self._right_goal_delta < 0)
-            and abs(right_delta) >= abs(self._right_goal_delta))
+    def get_output_tasks(self):
+        return set()
 
-        is_teleop_task = self._left_goal_delta == 0 and self._right_goal_delta == 0
-        self._current_task_done = left_done and right_done
-
-        if self._current_task_done and not is_teleop_task:
-            self._left_wheel.set_velocity(0)
-            self._right_wheel.set_velocity(0)
-
-        return None  # Placeholder for adaptive velocity control
+    def process(self, ctx):
+        if self._should_request_task:
+            if self._task:
+                ctx.complete_task(self._task)
+                self._task = None
+            ctx.request_task()
+        else:
+            left_delta = self._left_wheel.get_distance() - self._left_start_pos
+            left_done = ((left_delta < 0) == (self._left_goal_delta < 0)
+                and abs(left_delta) >= abs(self._left_goal_delta))
+            right_delta = self._right_wheel.get_distance() - self._right_start_pos
+            right_done = ((right_delta < 0) == (self._right_goal_delta < 0)
+                and abs(right_delta) >= abs(self._right_goal_delta))
+            if left_done and right_done:
+                if self._task:
+                    ctx.complete_task(self._task)
+                self._should_request_task = True
+                self._left_wheel.set_velocity(0)
+                self._right_wheel.set_velocity(0)
 
     def accept_task(self, task):
-        if isinstance(task, AxialMovementTask):
-            self._left_goal_delta = task.distance * self.GEAR_RATIO * self.SLIPPING_CONSTANT
-            self._right_goal_delta = task.distance * self.GEAR_RATIO * self.SLIPPING_CONSTANT
+        self._task = task
+        if isinstance(task, TankDriveTask):
+            self._should_request_task = True
+            max_abs_power = max(abs(task.get_left()), abs(task.get_right()), 1)
+            self._left_wheel.set_velocity(task.get_left() / max_abs_power)
+            self._right_wheel.set_velocity(task.get_right() / max_abs_power)
+        elif isinstance(task, AxialMovementTask):
+            self._should_request_task = False
+            self._left_goal_delta = task.get_distance() * self.GEAR_RATIO * self.SLIPPING_CONSTANT
+            self._right_goal_delta = task.get_distance() * self.GEAR_RATIO * self.SLIPPING_CONSTANT
         elif isinstance(task, TurnTask):
-            self._left_goal_delta = (-task.angle * self.WHEEL_SPAN_RADIUS * self.GEAR_RATIO
+            self._should_request_task = False
+            self._left_goal_delta = (-task.get_angle() * self.WHEEL_SPAN_RADIUS * self.GEAR_RATIO
                 * self.SLIPPING_CONSTANT)
-            self._right_goal_delta = (task.angle * self.WHEEL_SPAN_RADIUS * self.GEAR_RATIO
+            self._right_goal_delta = (task.get_angle() * self.WHEEL_SPAN_RADIUS * self.GEAR_RATIO
                 * self.SLIPPING_CONSTANT)
-        elif isinstance(task, TankDriveTask):
-            self._left_goal_delta = 0
-            self._right_goal_delta = 0
-            max_abs_power = max(abs(task.left), abs(task.right), 1)
-            self._left_wheel.set_velocity(task.left / max_abs_power)
-            self._right_wheel.set_velocity(task.right / max_abs_power)
-            return
-        else:
-            raise UnsupportedTaskError(self, task)
 
-        self._current_task_done = False
-        self._left_start_pos = self._left_wheel.get_distance()
-        self._right_start_pos = self._right_wheel.get_distance()
-        self._left_wheel.set_velocity(copysign(1, self._left_goal_delta))
-        self._right_wheel.set_velocity(copysign(1, self._right_goal_delta))
+        if not self._should_request_task:
+            self._left_start_pos = self._left_wheel.get_distance()
+            self._right_start_pos = self._right_wheel.get_distance()
+            self._left_wheel.set_velocity(copysign(1, self._left_goal_delta))
+            self._right_wheel.set_velocity(copysign(1, self._right_goal_delta))

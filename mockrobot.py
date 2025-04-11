@@ -1,6 +1,7 @@
 import time
 import log
 
+
 class MockRobot:
     """Simulates a robot with connected peripherals.
 
@@ -51,12 +52,12 @@ class MockRobot:
         self._check_property(device_id, value_name)
         if self._device_types[device_id] == "koalabear":
             self._update_koalabear(device_id)
-        self._logger.debug(f"get:{device_id},{value_name}={self._devices[device_id][value_name]}")
+        self._logger.trace(f"get:{device_id},{value_name}={self._devices[device_id][value_name]}")
         return self._devices[device_id][value_name]
 
     def set_value(self, device_id, value_name, value):
         self._check_property(device_id, value_name)
-        self._logger.info(f"set:{device_id},{value_name}={str(value)}")
+        self._logger.trace(f"set:{device_id},{value_name}={str(value)}")
         if self._device_types[device_id] == "koalabear":
             self._update_koalabear(device_id)
         expected_type = type(self._devices[device_id][value_name])
@@ -97,3 +98,13 @@ class MockRobot:
             raise ValueError("Koalabear velocity b is out of bounds.")
         device["enc_a"] += device["velocity_a"] * dt * self._motor_ticks_per_sec * (-1 if device["invert_a"] else 1)
         device["enc_b"] += device["velocity_b"] * dt * self._motor_ticks_per_sec * (-1 if device["invert_b"] else 1)
+
+
+class MockGamepad:
+    def get_value(self, key):
+        return False
+
+
+class MockKeyboard:
+    def get_value(self, key):
+        return False
