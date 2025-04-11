@@ -1,6 +1,6 @@
 from challenges import *
 import opmodes
-from mock_robot import MockRobot
+from mockrobot import MockRobot
 from log import LoggerProvider
 from log import StdioBackend
 
