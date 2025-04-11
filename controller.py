@@ -95,9 +95,6 @@ class RobotController:
         setup_info = LayerSetupInfo(
             robot,
             self,
-            localizer,
-            gamepad,
-            keyboard,
             logger_provider
         )
         for layer in layers.get_verts():

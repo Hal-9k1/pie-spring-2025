@@ -8,19 +8,10 @@ class LayerSetupInfo:
     def __init__(self, robot, robot_controller, robot_localizer, gamepad, keyboard, logger_provider):
         self._robot = robot
         self._robot_controller = robot_controller
-        self._robot_localizer = robot_localizer
-        self._gamepad = gamepad
-        self._keyboard = keyboard
         self._logger_provider = logger_provider
     
     def get_robot(self):
         return self._robot
-
-    def get_localizer(self):
-        return self._robot_localizer
-
-    def get_gamepad(self):
-        return self._gamepad
 
     def get_logger_provider(self):
         return self._logger_provider.clone()
