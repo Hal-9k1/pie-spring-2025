@@ -1,19 +1,22 @@
 from abc import ABC
 from abc import abstractmethod
-from log import LoggerProvider
-from layer.drive import TwoWheelDrive
-from layer import AbstractQueuedLayer
-from controller import RobotController
 from controller import LayerGraph
-from task.drive import TurnTask
-from task.drive import AxialMovementTask
+from controller import RobotController
+from layer import AbstractQueuedLayer
 from layer import WinLayer
+from layer.drive import TwoWheelDrive
+from layer.input import GamepadInputGenerator
+from layer.mapping import TankDriveMapping
+from layer.mapping import ZeldaDriveMapping
+from log import LoggerProvider
 from task import WinTask
+from task.drive import AxialMovementTask
+from task.drive import TurnTask
 import math
 
 class AbstractOpmode(ABC):
     @abstractmethod
-    def get_layers(self):
+    def get_layers(self, gamepad, keyboard):
         pass
 
     def post_setup(self):
@@ -40,10 +43,7 @@ class AbstractOpmode(ABC):
 
         controller.setup(
             robot,
-            localizer,
-            self.get_layers(),
-            gamepad,
-            keyboard,
+            self.get_layers(gamepad, keyboard),
             lp
         )
 
@@ -53,8 +53,20 @@ class AbstractOpmode(ABC):
                 break
 
 
+class TwoWheelDriveTeleopOpmode(AbstractOpmode):
+    def get_layers(self, gamepad, keyboard):
+        lg = LayerGraph()
+        lg.add_chain([GamepadInputGenerator(gamepad), ZeldaDriveMapping(), TwoWheelDrive()])
+        return lg
+
+    def get_robot_spec(self):
+        return {
+            'koalabear': 2,
+        }
+
+
 class SampleAutonomousOpmode(AbstractOpmode):
-    def get_layers(self):
+    def get_layers(self, gamepad, keyboard):
         lg = LayerGraph()
         lg.add_chain([WinLayer(), SampleProgrammedDriveLayer(), TwoWheelDrive()])
         return lg

@@ -5,7 +5,7 @@ from task import WinTask
 
 
 class LayerSetupInfo:
-    def __init__(self, robot, robot_controller, robot_localizer, gamepad, keyboard, logger_provider):
+    def __init__(self, robot, robot_controller, logger_provider):
         self._robot = robot
         self._robot_controller = robot_controller
         self._logger_provider = logger_provider
@@ -93,7 +93,7 @@ class AbstractFunctionLayer(Layer):
         self._subtask_completed = False
 
     @abstractmethod
-    def map(self):
+    def map(self, task):
         raise NotImplementedError
 
 

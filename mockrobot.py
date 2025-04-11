@@ -1,6 +1,7 @@
 import time
 import log
 
+
 class MockRobot:
     """Simulates a robot with connected peripherals.
 
@@ -97,3 +98,13 @@ class MockRobot:
             raise ValueError("Koalabear velocity b is out of bounds.")
         device["enc_a"] += device["velocity_a"] * dt * self._motor_ticks_per_sec * (-1 if device["invert_a"] else 1)
         device["enc_b"] += device["velocity_b"] * dt * self._motor_ticks_per_sec * (-1 if device["invert_b"] else 1)
+
+
+class MockGamepad:
+    def get_value(self, key):
+        return False
+
+
+class MockKeyboard:
+    def get_value(self, key):
+        return False

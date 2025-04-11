@@ -71,6 +71,9 @@ class TwoWheelDrive(Layer):
 
     def process(self, ctx):
         if self._should_request_task:
+            if self._task:
+                ctx.complete_task(self._task)
+                self._task = None
             ctx.request_task()
         else:
             left_delta = self._left_wheel.get_distance() - self._left_start_pos
@@ -87,12 +90,12 @@ class TwoWheelDrive(Layer):
                 self._right_wheel.set_velocity(0)
 
     def accept_task(self, task):
+        self._task = task
         if isinstance(task, TankDriveTask):
             self._should_request_task = True
-            ctx.complete_task(self._task)
             max_abs_power = max(abs(task.get_left()), abs(task.get_right()), 1)
-            self._left_wheel.set_velocity(task.left / max_abs_power)
-            self._right_wheel.set_velocity(task.right / max_abs_power)
+            self._left_wheel.set_velocity(task.get_left() / max_abs_power)
+            self._right_wheel.set_velocity(task.get_right() / max_abs_power)
         elif isinstance(task, AxialMovementTask):
             self._should_request_task = False
             self._left_goal_delta = task.get_distance() * self.GEAR_RATIO * self.SLIPPING_CONSTANT
@@ -105,7 +108,6 @@ class TwoWheelDrive(Layer):
                 * self.SLIPPING_CONSTANT)
 
         if not self._should_request_task:
-            self._task = task
             self._left_start_pos = self._left_wheel.get_distance()
             self._right_start_pos = self._right_wheel.get_distance()
             self._left_wheel.set_velocity(copysign(1, self._left_goal_delta))

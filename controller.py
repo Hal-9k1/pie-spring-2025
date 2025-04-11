@@ -38,6 +38,7 @@ class LayerGraph:
 
         if self._check_cyclic(a):
             raise ValueError(f'Cycle detected')
+        return self
 
     def add_connections(self, connections):
         try:
@@ -47,12 +48,14 @@ class LayerGraph:
             raise ValueError('Parameter must be an iterable of two-element iterables')
         for c in connections:
             self.add_connection(*c)
+        return self
 
     def add_chain(self, chain):
         if len(chain) < 2:
             raise ValueError('Parameter must have at least two elements')
         for a, b in zip(chain[:-1], chain[1:]):
             self.add_connection(a, b)
+        return self
 
     def get_verts(self):
         return {e for l in (self._parents.keys(), *self._parents.values()) for e in l}
@@ -90,7 +93,7 @@ class RobotController:
     def __init__(self):
         self._layers = None
 
-    def setup(self, robot, localizer, layers, gamepad, keyboard, logger_provider, debug_mode=False):
+    def setup(self, robot, layers, logger_provider, debug_mode=False):
         self._logger = logger_provider.get_logger("RobotController")
         setup_info = LayerSetupInfo(
             robot,
@@ -131,7 +134,8 @@ class RobotController:
                 lambda t: completed_tasks.append(t),
                 do_escalate
             )
-            layer.process(ctx)
+            for _ in range(4 if self._debug_mode else 1):
+                layer.process(ctx)
 
             for task in completed_tasks:
                 for parent in parents:

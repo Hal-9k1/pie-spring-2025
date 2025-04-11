@@ -1,13 +1,15 @@
 from challenges import *
 import opmodes
 from mockrobot import MockRobot
+from mockrobot import MockGamepad
+from mockrobot import MockKeyboard
 from log import FilterBackend
 from log import Logger
 from log import LoggerProvider
 from log import StdioBackend
 
 auto_opmode = opmodes.SampleAutonomousOpmode()
-#teleop_opmode = opmodes.AbstractOpmode()
+teleop_opmode = opmodes.TwoWheelDriveTeleopOpmode()
 
 FORCE_MOCK_ROBOT = False
 FORCE_MOCK_GAMEPAD = False

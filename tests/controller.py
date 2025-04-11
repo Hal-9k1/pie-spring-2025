@@ -91,7 +91,7 @@ class TestRobotController(TestCase):
 
     def _create_rc(self):
         self._rc = RobotController()
-        self._rc.setup(None, None, self._lg, None, None, LoggerProvider())
+        self._rc.setup(None, self._lg, LoggerProvider())
 
     def _test_rc(self):
         self._create_rc()
