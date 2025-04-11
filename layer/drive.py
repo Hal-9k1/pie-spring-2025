@@ -38,7 +38,7 @@ class TwoWheelDrive(Layer):
                 setup_info.get_robot(),
                 setup_info.get_logger('Right wheel motor'),
                 self.RIGHT_DRIVE_MOTOR_NAME,
-                'insert a or b here'
+                'a'
             ),
             self.WHEEL_RADIUS,
             self.INTERNAL_GEARING
@@ -49,7 +49,7 @@ class TwoWheelDrive(Layer):
                 setup_info.get_robot(),
                 setup_info.get_logger('Left wheel motor'),
                 self.LEFT_DRIVE_MOTOR_NAME,
-                'insert a or b here'
+                'b'
             ),
             self.WHEEL_RADIUS,
             self.INTERNAL_GEARING
