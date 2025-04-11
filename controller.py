@@ -14,11 +14,16 @@ class LayerGraph:
             raise TypeError(f'{b} is not a Layer')
         parent_outs = a.get_output_tasks()
         child_ins = b.get_input_tasks()
-        if not isinstance(parent_outs, set):
-            raise TypeError(f'Output tasks of {a} is not a set')
-        if not isinstance(child_ins, set):
-            raise TypeError(f'Input tasks of {b} is not a set')
-        if parent_outs.isdisjoint(child_ins):
+        if not all(type(out_type) == type for out_type in parent_outs):
+            raise TypeError(f'{a}\'s output_tasks are not all types')
+        if not all(type(in_type) == type for in_type in child_ins):
+            raise TypeError(f'{b}\'s output_tasks are not all types')
+        is_compatible = any(
+            any(
+                out_type == in_type or issubclass(out_type, in_type) for out_type in parent_outs
+            ) for in_type in child_ins
+        )
+        if not is_compatible:
             raise TypeError(f'Parent {a} and child {b} share no compatible task interface')
 
         if a not in self._children:

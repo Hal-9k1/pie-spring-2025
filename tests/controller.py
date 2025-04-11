@@ -2,6 +2,7 @@ from controller import LayerGraph
 from controller import RobotController
 from layer import Layer
 from log import LoggerProvider
+from log import StdioBackend
 from task import Task
 from unittest import TestCase
 
@@ -105,7 +106,7 @@ class TestRobotController(TestCase):
 
     def _check_collector_unordered(self, c, types):
         unique = {t for t in types}
-        collected = c.collect()
+        collected = [type(t) for t in c.collect()]
         for t in unique:
             self.assertEqual(collected.count(t), types.count(t))
 
@@ -162,6 +163,7 @@ class TestRobotController(TestCase):
             snooper_layer,
         ])
         self._lg.add_connection(game_action_layer, peripheral_layer)
+        self._lg.add_connection(game_action_layer, drive_layer)
         self._test_rc()
         self._check_collector(peripheral_layer, [PeripheralTask] * 2)
         self._check_collector(drive_layer, [DriveTask] * 2)
@@ -201,6 +203,9 @@ class CollectLayer(Layer):
         self._task = None
         self._input_tasks = input_tasks or {Task}
 
+    def setup(self, setup_info):
+        self._logger = setup_info.get_logger('CollectLayer')
+
     def get_input_tasks(self):
         return self._input_tasks
 
@@ -218,7 +223,7 @@ class CollectLayer(Layer):
         self._tasks.append(task)
 
     def collect(self):
-        return self._task
+        return self._tasks
 
 
 class FlatMapLayer(Layer):
@@ -227,23 +232,29 @@ class FlatMapLayer(Layer):
         self._task = None
         self._subtasks = None
         self._complete = True
+        self._emitted = None
+
+    def setup(self, setup_info):
+        self._logger = setup_info.get_logger('FlatMapLayer')
 
     def get_input_tasks(self):
         return set(self._mapping.keys())
 
     def get_output_tasks(self):
-        return {v for l in self._mapping.values() for v in l}
+        return {type(v) for l in self._mapping.values() for v in l}
 
     def subtask_completed(self, task):
-        self._complete = True
+        if task == self._emitted:
+            self._complete = True
 
     def process(self, ctx):
         if self._complete:
             if self._subtasks:
-                self._complete = False
                 subtask = next(self._subtasks, None)
                 if subtask:
+                    self._complete = False
                     ctx.emit_subtask(subtask)
+                    self._emitted = subtask
                 else:
                     self._subtasks = None
             if not self._subtasks:
@@ -254,13 +265,16 @@ class FlatMapLayer(Layer):
 
     def accept_task(self, task):
         self._task = task
-        self._complete = False
-        self._subtasks = iter(self._mapping[task])
+        self._subtasks = iter(self._mapping[type(task)])
 
 class EmitterLayer(Layer):
     def __init__(self, tasks):
         self._tasks = iter(tasks)
         self._task_types = {type(t) for t in tasks}
+        self._complete = True
+
+    def setup(self, setup_info):
+        self._logger = setup_info.get_logger('EmitterLayer')
 
     def get_input_tasks(self):
         return set()
