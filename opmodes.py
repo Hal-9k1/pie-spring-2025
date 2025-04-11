@@ -49,7 +49,7 @@ class AbstractOpmode(ABC):
 
         while True:
             if controller.update():
-                logger.info('Opmode finished.')
+                logger.warn('Opmode finished.')
                 break
 
 

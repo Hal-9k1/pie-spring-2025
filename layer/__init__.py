@@ -45,7 +45,7 @@ class LayerProcessContext:
         self._emit_subtask_hook(subtask)
 
     def complete_task(self, task):
-        self._complete_task_hook()
+        self._complete_task_hook(task)
 
     def request_task(self):
         self._request_task_hook()
@@ -112,6 +112,9 @@ class AbstractQueuedLayer(Layer):
         self._next_subtask = None
         self._task = None
 
+    def setup(self, setup_info):
+        self._logger = setup_info.get_logger('AbstractQueuedLayer')
+
     def subtask_completed(self, task):
         self._advance()
 
@@ -131,6 +134,7 @@ class AbstractQueuedLayer(Layer):
             self._next_subtask = None
 
     def accept_task(self, task):
+        self._task = task
         self._subtask_iter = iter(self.map_to_subtasks(task))
         self._advance()
 
@@ -186,6 +190,9 @@ class WinLayer(Layer):
         self._emitted_win = False
         self._completed_win = False
 
+    def setup(self, setup_info):
+        self._logger = setup_info.get_logger('WinLayer')
+
     def get_input_tasks(self):
         return set()
 
@@ -197,9 +204,10 @@ class WinLayer(Layer):
 
     def process(self, ctx):
         if not self._emitted_win:
+            self._emitted_win = True
             ctx.emit_subtask(WinTask())
         if self._completed_win:
-            ctx.complete_task(None)
+            ctx.request_task()
 
     def accept_task(self, task):
         raise ValueError

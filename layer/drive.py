@@ -54,12 +54,14 @@ class TwoWheelDrive(Layer):
             self.WHEEL_RADIUS,
             self.INTERNAL_GEARING
         )
+        self._logger = setup_info.get_logger('TwoWheelDrive')
         self._is_direct_control = True
         self._left_start_pos = 0
         self._right_start_pos = 0
         self._left_goal_delta = 0
         self._right_goal_delta = 0
         self._should_request_task = True
+        self._task = None
 
     def get_input_tasks(self):
         return {AxialMovementTask, TurnTask, TankDriveTask}
@@ -78,6 +80,8 @@ class TwoWheelDrive(Layer):
             right_done = ((right_delta < 0) == (self._right_goal_delta < 0)
                 and abs(right_delta) >= abs(self._right_goal_delta))
             if left_done and right_done:
+                if self._task:
+                    ctx.complete_task(self._task)
                 self._should_request_task = True
                 self._left_wheel.set_velocity(0)
                 self._right_wheel.set_velocity(0)
@@ -85,6 +89,7 @@ class TwoWheelDrive(Layer):
     def accept_task(self, task):
         if isinstance(task, TankDriveTask):
             self._should_request_task = True
+            ctx.complete_task(self._task)
             max_abs_power = max(abs(task.get_left()), abs(task.get_right()), 1)
             self._left_wheel.set_velocity(task.left / max_abs_power)
             self._right_wheel.set_velocity(task.right / max_abs_power)
@@ -100,6 +105,7 @@ class TwoWheelDrive(Layer):
                 * self.SLIPPING_CONSTANT)
 
         if not self._should_request_task:
+            self._task = task
             self._left_start_pos = self._left_wheel.get_distance()
             self._right_start_pos = self._right_wheel.get_distance()
             self._left_wheel.set_velocity(copysign(1, self._left_goal_delta))

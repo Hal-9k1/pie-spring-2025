@@ -20,15 +20,21 @@ def get_robot_interfaces(use_input, robot_spec):
 
     logger_provider = LoggerProvider()
     logger_provider.add_backend(
-        FilterBackend(StdioBackend(), True).add_exception(Logger.TRACE_SEVERITY)
+        FilterBackend(StdioBackend(), True)
+            .add_exception(Logger.TRACE_SEVERITY)
     )
+
+    mock_robot_logger_provider = logger_provider
 
     try:
         Robot
     except NameError:
         is_dawn_environment = False
 
-    robot = Robot if is_dawn_environment and not FORCE_MOCK_ROBOT else MockRobot(robot_spec, logger_provider)
+    robot = (
+        Robot if is_dawn_environment and not FORCE_MOCK_ROBOT
+        else MockRobot(robot_spec, mock_robot_logger_provider)
+    )
 
     if use_input:
         gamepad = Gamepad if is_dawn_environment and not FORCE_MOCK_GAMEPAD else MockGamepad()
@@ -38,7 +44,6 @@ def get_robot_interfaces(use_input, robot_spec):
 
 @_PREP_ENTRY_POINT
 def autonomous():
-    print(get_robot_interfaces(False, auto_opmode.get_robot_spec()))
     auto_opmode.run(*get_robot_interfaces(False, auto_opmode.get_robot_spec()))
 
 @_PREP_ENTRY_POINT
