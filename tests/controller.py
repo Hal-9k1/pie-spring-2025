@@ -251,7 +251,7 @@ class FlatMapLayer(Layer):
                     ctx.complete_task(self._task)
                     self._task = None
                 ctx.request_task()
-            
+
     def accept_task(self, task):
         self._task = task
         self._complete = False
