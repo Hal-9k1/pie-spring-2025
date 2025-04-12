@@ -6,6 +6,7 @@ from layer import AbstractQueuedLayer
 from layer import WinLayer
 from layer.drive import TwoWheelDrive
 from layer.input import GamepadInputGenerator
+from layer.input import XboxGamepadInputGenerator
 from layer.mapping import TankDriveMapping
 from layer.mapping import ZeldaDriveMapping
 from log import LoggerProvider
@@ -32,31 +33,33 @@ class AbstractOpmode(ABC):
     def get_robot_spec(self):
         pass
 
-    def run(self, logger_provider, robot, gamepad, keyboard):
-        controller = RobotController()
+    def setup(self, logger_provider, robot, gamepad, keyboard):
+        self._controller = RobotController()
 
         lp = logger_provider.clone()
         self.configure_logger(lp)
-        logger = lp.get_logger('AbstractOpmode')
+        self._logger = lp.get_logger('AbstractOpmode')
 
         localizer = self.get_localizer()
 
-        controller.setup(
+        self._controller.setup(
             robot,
             self.get_layers(gamepad, keyboard),
             lp
         )
 
-        while True:
-            if controller.update():
-                logger.warn('Opmode finished.')
-                break
+        self._finished = False
+
+    def loop(self):
+        if not self._finished and self._controller.update():
+            self._logger.warn('Opmode finished.')
+            self._finished = True
 
 
 class TwoWheelDriveTeleopOpmode(AbstractOpmode):
     def get_layers(self, gamepad, keyboard):
         lg = LayerGraph()
-        lg.add_chain([GamepadInputGenerator(gamepad), ZeldaDriveMapping(), TwoWheelDrive()])
+        lg.add_chain([XboxGamepadInputGenerator(gamepad), ZeldaDriveMapping(), TwoWheelDrive()])
         return lg
 
     def get_robot_spec(self):

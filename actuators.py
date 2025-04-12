@@ -27,7 +27,7 @@ class Motor:
         self._set("pid_kd", d)
         return self
     def set_velocity(self, velocity):
-        self._set("velocity", velocity)
+        self._set("velocity", velocity * (-1 if self._is_inverted else 1))
         return self
     def get_velocity(self):
         return self._get("velocity")
@@ -41,6 +41,7 @@ class Motor:
         self._robot.set_value(self._controller, f"{key}_{self._motor}", value)
     def _get(self, key):
         return self._robot.get_value(self._controller, f"{key}_{self._motor}")
+
 
 class PidMotor(Motor):
     """Adds custom PID control to a Motor since PiE's implementation is weird."""

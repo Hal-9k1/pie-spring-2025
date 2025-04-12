@@ -13,13 +13,22 @@ from units import convert
 class TwoWheelDrive(Layer):
     """Drive layer for a two-wheel drive robot."""
 
-    LEFT_DRIVE_MOTOR_NAME = 'left_front_drive'
-    RIGHT_DRIVE_MOTOR_NAME = 'right_front_drive'
-    WHEEL_RADIUS = 0.42
-    GEAR_RATIO = 1
-    WHEEL_SPAN_RADIUS = convert(15.0 / 2, 'in', 'm')
-    SLIPPING_CONSTANT = 1
-    INTERNAL_GEARING = 30
+    LEFT_DRIVE_MOTOR_NAME = '6_5011048539317462848'
+    RIGHT_DRIVE_MOTOR_NAME = '6_5011048539317462848'
+    WHEEL_RADIUS = convert(5, 'cm', 'm')
+    # Wheel teeth / hub teeth:
+    GEAR_RATIO = 80 / 36
+    WHEEL_SPAN_RADIUS = convert(36.5 / 2, 'cm', 'm')
+    # Encoder fac = required wheel distance / distance calculated from task
+    LEFT_ENCODER_FAC = 1
+    RIGHT_ENCODER_FAC = 1
+
+    # Encoder fac = multiplied by power
+    LEFT_POWER_FAC = 1
+    RIGHT_POWER_FAC = 1
+
+    LEFT_INTERNAL_GEARING = 70
+    RIGHT_INTERNAL_GEARING = 70
     TICKS_PER_REV = 160
 
     def __init__(self):
@@ -38,10 +47,10 @@ class TwoWheelDrive(Layer):
                 setup_info.get_robot(),
                 setup_info.get_logger('Right wheel motor'),
                 self.RIGHT_DRIVE_MOTOR_NAME,
-                'a'
-            ),
+                'b'
+            ).set_invert(True),
             self.WHEEL_RADIUS,
-            self.INTERNAL_GEARING
+            self.RIGHT_INTERNAL_GEARING
         )
         self._left_wheel = Wheel(
             setup_info.get_logger('Left wheel'),
@@ -49,10 +58,10 @@ class TwoWheelDrive(Layer):
                 setup_info.get_robot(),
                 setup_info.get_logger('Left wheel motor'),
                 self.LEFT_DRIVE_MOTOR_NAME,
-                'b'
-            ),
+                'a'
+            ).set_invert(False),
             self.WHEEL_RADIUS,
-            self.INTERNAL_GEARING
+            self.LEFT_INTERNAL_GEARING
         )
         self._logger = setup_info.get_logger('TwoWheelDrive')
         self._is_direct_control = True
@@ -93,22 +102,34 @@ class TwoWheelDrive(Layer):
         self._task = task
         if isinstance(task, TankDriveTask):
             self._should_request_task = True
-            max_abs_power = max(abs(task.get_left()), abs(task.get_right()), 1)
-            self._left_wheel.set_velocity(task.get_left() / max_abs_power)
-            self._right_wheel.set_velocity(task.get_right() / max_abs_power)
+            left = task.get_left()
+            right = task.get_right()
+            max_abs_power = max(abs(left), abs(right), 1)
+            self._left_wheel.set_velocity(left * self._get_left_max_velocity() / max_abs_power)
+            self._right_wheel.set_velocity(right * self._get_right_max_velocity() / max_abs_power)
         elif isinstance(task, AxialMovementTask):
             self._should_request_task = False
-            self._left_goal_delta = task.get_distance() * self.GEAR_RATIO * self.SLIPPING_CONSTANT
-            self._right_goal_delta = task.get_distance() * self.GEAR_RATIO * self.SLIPPING_CONSTANT
+            self._left_goal_delta = task.get_distance() * self.GEAR_RATIO * self.LEFT_ENCODER_FAC
+            self._right_goal_delta = task.get_distance() * self.GEAR_RATIO * self.RIGHT_ENCODER_FAC
         elif isinstance(task, TurnTask):
             self._should_request_task = False
             self._left_goal_delta = (-task.get_angle() * self.WHEEL_SPAN_RADIUS * self.GEAR_RATIO
-                * self.SLIPPING_CONSTANT)
+                * self.LEFT_ENCODER_FAC)
             self._right_goal_delta = (task.get_angle() * self.WHEEL_SPAN_RADIUS * self.GEAR_RATIO
-                * self.SLIPPING_CONSTANT)
+                * self.RIGHT_ENCODER_FAC)
 
         if not self._should_request_task:
             self._left_start_pos = self._left_wheel.get_distance()
             self._right_start_pos = self._right_wheel.get_distance()
-            self._left_wheel.set_velocity(copysign(1, self._left_goal_delta))
-            self._right_wheel.set_velocity(copysign(1, self._right_goal_delta))
+            self._left_wheel.set_velocity(
+                copysign(self._get_left_max_velocity(), self._left_goal_delta)
+            )
+            self._right_wheel.set_velocity(
+                copysign(self._get_right_max_velocity(), self._right_goal_delta)
+            )
+
+    def _get_left_max_velocity(self):
+        return self.LEFT_ENCODER_FAC * self.LEFT_INTERNAL_GEARING / max(self.LEFT_INTERNAL_GEARING, self.RIGHT_INTERNAL_GEARING)
+
+    def _get_right_max_velocity(self):
+        return self.RIGHT_ENCODER_FAC * self.RIGHT_INTERNAL_GEARING / max(self.LEFT_INTERNAL_GEARING, self.RIGHT_INTERNAL_GEARING)
