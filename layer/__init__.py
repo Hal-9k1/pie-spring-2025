@@ -102,17 +102,21 @@ class AbstractQueuedLayer(Layer):
         self._subtask_iter = None
         self._next_subtask = None
         self._task = None
+        self._emitted = None
 
     def setup(self, setup_info):
         self._logger = setup_info.get_logger('AbstractQueuedLayer')
 
     def subtask_completed(self, task):
-        self._advance()
+        if self._emitted == task:
+            self._advance()
+            self._logger.info('subtask completed, will emit on next process')
 
     def _advance(self):
-        self._next_subtask = next(self._subtask_iter, None)
         if not self._next_subtask:
-            self._subtask_iter = None
+            self._next_subtask = next(self._subtask_iter, None)
+            if not self._next_subtask:
+                self._subtask_iter = None
 
     def process(self, ctx):
         if not self._subtask_iter:
@@ -121,7 +125,9 @@ class AbstractQueuedLayer(Layer):
                 self._task = None
             ctx.request_task()
         if self._next_subtask:
+            self._logger.info('emitting')
             ctx.emit_subtask(self._next_subtask)
+            self._emitted = self._next_subtask
             self._next_subtask = None
 
     def accept_task(self, task):
