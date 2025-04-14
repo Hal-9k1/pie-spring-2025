@@ -24,33 +24,60 @@ class DynwinPathfinder(Layer):
     TARGET_ANGLE_SMOOTHING_K = 1
     CLEARANCE_STEP = 0.05
 
+    def __init__(self, output_task_type):
+        if output_task_type not in (TankDriveTask, HolonomicDriveTask):
+            raise ValueError('Invalid output task type')
+        self._output_task_type = output_task_type
+
+    def get_input_tasks(self):
+        return {MoveToFieldTask}
+
+    def get_output_tasks(self):
+        return {self._output_task_type}
+
     def setup(self, setup_info):
         self._obstacles = []
-        self._localizer = setup_info.get_localizer()
         self._initial_transform = None
 
-    def is_task_done(self):
-        delta = self._get_transform().inv().mul(self._goal)
-        return (delta.get_translation().len() < self.GOAL_COMPLETE_EPSILON
-            and delta.get_direction().get_angle() < self.GOAL_COMPLETE_EPSILON)
+    def complete_task(self, task):
+        if task == self._emitted_task:
+            self._should_emit = True
 
-    def update(self, completed):
-        now = time()
-        if now - self._last_calc_time > self.CALCULATE_INTERVAL:
-            self._calculate_path()
-            self._last_calc_time = now
-        return iter([HolonomicDriveTask(
-            self._current_trajectory.axial,
-            -self._current_trajectory.lateral,
-            self._current_trajectory.yaw
-        )])
+    def process(self, ctx):
+        delta = self._get_transform().inv().mul(self._goal)
+        complete = (delta.get_translation().len() < self.GOAL_COMPLETE_EPSILON
+            and delta.get_direction().get_angle() < self.GOAL_COMPLETE_EPSILON)
+        if complete:
+            if self._task:
+                ctx.complete_task(task)
+                self._emitted_task = self._create_brake_task()
+                ctx.emit_subtask(self._emitted_task)
+                self._should_emit = False
+            ctx.request_task()
+        if self._should_emit:
+            now = time()
+            if now - self._last_calc_time > self.CALCULATE_INTERVAL:
+                self._calculate_path()
+                self._last_calc_time = now
+            if self._output_task_type == HolonomicDriveTask:
+                self._emitted_task = HolonomicDriveTask(
+                    self._current_trajectory.get_axial(),
+                    -self._current_trajectory.get_lateral(),
+                    self._current_trajectory.get_yaw()
+                )
+            else:
+                axial = self._current_trajectory.get_axial(),
+                yaw = -self._current_trajectory.get_yaw()
+                self._emitted_task = TankDriveTask(
+                    axial - yaw,
+                    axial + yaw
+                )
+            ctx.emit_subtask(self._emitted_task)
+            self._should_emit = False
 
     def accept_task(self, task):
-        if isinstance(task, MoveToFieldTask):
-            self._goal = task.get_goal_transform()
-            self._last_calc_time = -inf
-        else:
-            raise UnsupportedTaskError(self, task)
+        self._goal = task.get_goal_transform()
+        self._last_calc_time = -inf
 
     def _evaluate_trajectory(self, trajectory):
         target_angle_score = self._evaluate_target_angle(trajectory) * self.TARGET_ANGLE_COEFF
@@ -58,7 +85,7 @@ class DynwinPathfinder(Layer):
         speed_score = self._evaluate_speed(trajectory) * self.SPEED_COEFF
         return target_angle_score + clearance_score + speed_score
 
-    def evaluate_target_angle(self, t):
+    def _evaluate_target_angle(self, t):
         final_transform = self._get_trajectory_transform(t, 1)
         final_direction = final_transform.get_direction()
         final_delta = final_transform.get_translation().mul(-1).add(goal.get_translation())
@@ -96,8 +123,8 @@ class DynwinPathfinder(Layer):
         best_score = -inf
 
         # Represents bounds of the search space.
-        max_bounds = Trajectory(1, 1, 1)
-        min_bounds = Trajectory(-1, -1, -1)
+        max_bounds = Trajectory(1, 1 if self._output_task_type == HolonomicDriveTask else self._TRAJECTORY_SEARCH_INCREMENT, 1)
+        min_bounds = Trajectory(-1, -1 if self._output_task_type == HolonomicDriveTask else 0, -1)
 
         inc = self._TRAJECTORY_SEARCH_INCREMENT
 
@@ -115,7 +142,7 @@ class DynwinPathfinder(Layer):
         if best_score == -inf:
             # Dynamic window was empty of trajectories (all valid ones interesct obstacles)
             # Spin until the dynamic window isn't empty
-            best_trajectory = new Trajectory(0, 0, 1)
+            best_trajectory = Trajectory(0, 0, 1)
         self._current_trajectory = best_trajectory
 
     def _check_dynamic_window(self, t) {
@@ -199,8 +226,8 @@ class DynamicObstacle(Obstacle):
         lateral_proj = self._transform.get_direction().get_perpendicular().proj(delta).len()
         if lateral_proj < self._size / 2:
             return axial_proj
-        ep1 = self._transform.mul(new Vec2(0, size / 2))
-        ep2 = self._transform.mul(new Vec2(0, -size / 2))
+        ep1 = self._transform.mul(Vec2(0, size / 2))
+        ep2 = self._transform.mul(Vec2(0, -size / 2))
         return min(ep1.add(point.mul(-1)).len(), ep2.add(point.mul(-1)).len())
 
 class StaticObstacle(Obstacle):
