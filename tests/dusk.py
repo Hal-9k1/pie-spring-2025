@@ -1,5 +1,6 @@
 from dusk import DuskClient
 from log import LoggerProvider
+
 from queue import Empty
 from queue import Queue
 from socket import SHUT_RDWR
@@ -54,9 +55,11 @@ class TestDusk(TestCase):
                 except SocketTimeoutError:
                     pass
         finally:
-            if dummy_server:
+            try:
                 dummy_server.shutdown(SHUT_RDWR)
                 dummy_server.close()
+            except (OSError, AttributeError):
+                pass
 
     def _handle_connection(self, cxn):
         while self._server_process:

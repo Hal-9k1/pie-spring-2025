@@ -1,36 +1,53 @@
 from challenges import *
-from opmodes import *
-from mock_robot import MockRobot
+import opmodes
+from mockrobot import MockRobot
+from mockrobot import MockGamepad
+from mockrobot import MockKeyboard
+from log import FilterBackend
+from log import Logger
+from log import LoggerProvider
+from log import StdioBackend
 
-auto_opmode = opmodes.AbstractOpmode()
-teleop_opmode = opmodes.AbstractOpmode()
+auto_opmode = opmodes.SampleAutonomousOpmode()
+teleop_opmode = opmodes.TwoWheelDriveTeleopOpmode()
 
 FORCE_MOCK_ROBOT = False
 FORCE_MOCK_GAMEPAD = False
 FORCE_MOCK_KEYBOARD = False
 
-def get_robot_interfaces(use_input):
+def get_robot_interfaces(use_input, robot_spec):
     is_dawn_environment = True
     gamepad = None
     keyboard = None
+
+    logger_provider = LoggerProvider()
+    logger_provider.add_backend(
+        FilterBackend(StdioBackend(), True)
+            .add_exception(Logger.TRACE_SEVERITY)
+    )
+
+    mock_robot_logger_provider = logger_provider
 
     try:
         Robot
     except NameError:
         is_dawn_environment = False
 
-    robot = Robot if is_dawn_environment and not FORCE_MOCK_ROBOT else MockRobot()
+    robot = (
+        Robot if is_dawn_environment and not FORCE_MOCK_ROBOT
+        else MockRobot(robot_spec, mock_robot_logger_provider)
+    )
 
     if use_input:
         gamepad = Gamepad if is_dawn_environment and not FORCE_MOCK_GAMEPAD else MockGamepad()
         keyboard = Keyboard if is_dawn_environment and not FORCE_MOCK_KEYBOARD else MockKeyboard()
 
-    return (robot, gamepad, keyboard)
+    return (logger_provider, robot, gamepad, keyboard)
 
 @_PREP_ENTRY_POINT
 def autonomous():
-    auto_opmode.run(*get_robot_interfaces(False))
+    auto_opmode.run(*get_robot_interfaces(False, auto_opmode.get_robot_spec()))
 
 @_PREP_ENTRY_POINT
 def teleop():
-    teleop_opmode.run(*get_robot_interfaces(True))
+    teleop_opmode.run(*get_robot_interfaces(True, teleop_opmode.get_robot_spec()))

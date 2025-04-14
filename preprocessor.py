@@ -56,7 +56,7 @@ def process_file(file_path, indent=" " * 4, module_name=None, module_list=None, 
                 break
             words = line.strip().split(" ")
             if not len(words):
-              module_buffer.append(line)  
+                module_buffer.append(line)
             elif words[0] == "import" or words[0] == "from":
                 imported_module_raw_name = words[1]
                 path_segments = imported_module_raw_name.split(".")
@@ -113,7 +113,7 @@ def process_file(file_path, indent=" " * 4, module_name=None, module_list=None, 
                     import_line += f"{words[3]} = _HELPER_Module('{imported_module_name}')"
                 elif import_mode == "from import":
                     if words[3] == "*":
-                        import_line += f"exec(\"for k, v in {module_exports}.items(): exec(k + \\\" = v\\\")\")"
+                        import_line += f"exec(\"[exec(k + ' = v') for k, v in {module_exports}.items() if not k.startswith('__')]\")"
                     else:
                         import_line += f"{words[3]} = {module_exports}[\"{words[3]}\"]"
                 elif import_mode == "from import as":

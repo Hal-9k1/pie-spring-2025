@@ -1,6 +1,8 @@
-from matrix import Mat3  # assuming Mat3 is imported from a module
+from task import Task
+from matrix import Mat3
 
-class MoveToFieldTask:
+
+class MoveToFieldTask(Task):
     """
     Instructs the robot to pathfind to a field space transform while avoiding obstacles.
     """
@@ -11,7 +13,7 @@ class MoveToFieldTask:
 
         :param transform: the goal field space transform.
         """
-        self.transform = transform
+        self._transform = transform
 
     def get_goal_transform(self) -> Mat3:
         """
@@ -19,5 +21,4 @@ class MoveToFieldTask:
 
         :return: The goal field space transform.
         """
-        return self.transform
-
+        return self._transform
