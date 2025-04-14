@@ -1,8 +1,12 @@
+from task import Task
+
+
 class Joystick:
     """Represents a joystick with x and y axes."""
     def __init__(self, x: float, y: float):
         self.x = x
         self.y = y
+
 
 class Joysticks:
     """Represents a pair of joysticks."""
@@ -10,11 +14,13 @@ class Joysticks:
         self.left = left
         self.right = right
 
+
 class ButtonPair:
     """Represents a pair of buttons, such as bumpers or triggers."""
     def __init__(self, left: bool, right: bool):
         self.left = left
         self.right = right
+
 
 class DirectionalPad:
     """Represents the directional pad (D-pad) on a gamepad."""
@@ -24,6 +30,7 @@ class DirectionalPad:
         self.down = down
         self.left = left
 
+
 class Buttons:
     """Represents individual buttons on a gamepad."""
     def __init__(self, a: bool, b: bool, x: bool, y: bool):
@@ -32,7 +39,8 @@ class Buttons:
         self.x = x
         self.y = y
 
-class GamepadInput:
+
+class GamepadInputTask:
     """Represents the input state of a gamepad."""
     TRIGGER_MIN = 0.3  # Threshold for triggers to be considered "pressed"
 
@@ -57,12 +65,17 @@ class GamepadInput:
     ):
         self.joysticks = Joysticks(Joystick(joystick_left_x, joystick_left_y), Joystick(joystick_right_x, joystick_right_y))
         self.bumpers = ButtonPair(bumper_left, bumper_right)
-        self.triggers = ButtonPair(trigger_left >= self.TRIGGER_MIN, trigger_right >= self.TRIGGER_MIN)
+        self.triggers = ButtonPair(
+            trigger_left if isinstance(trigger_left, bool) else trigger_left >= self.TRIGGER_MIN,
+            trigger_right if isinstance(trigger_right, bool) else trigger_right >= self.TRIGGER_MIN
+        )
         self.dpad = DirectionalPad(dpad_up, dpad_right, dpad_down, dpad_left)
         self.buttons = Buttons(button_a, button_b, button_x, button_y)
 
-class GamepadInputTask:
-    """Holds a snapshot of input from all connected gamepads."""
-    def __init__(self, gamepad0: GamepadInput = None, gamepad1: GamepadInput = None):
-        self.gamepad0 = gamepad0
-        self.gamepad1 = gamepad1
+
+class KeyboardInputTask:
+    def __init__(self, input_dict):
+        self._input_dict = input_dict
+
+    def get(self, key):
+        return self._input_dict[key]
