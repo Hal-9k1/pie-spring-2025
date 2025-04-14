@@ -46,27 +46,18 @@ class AbstractFinDiffLocalizationData(LocalizationData):
         self._epsilon = epsilon
 
     def get_position_probability_dx(self, pos, ignore_roots):
-        def calculations(b):
-            if b is not None:
-                negative_center = pos.mul(-1)
-                epsilon_vec = Vec2(self.epsilon, self.epsilon)
-                while True:
-                    if math.isfinite(product) is not True:
-                        diff = negative_center.add(b)
-                        factor = 1.0 / (_diff.dot(_diff) + 1.0) - 1.0
-                        product = 1.0 / _factor
-                        negative_center = negative_center.add(epsilon_vec)
-                    else:
-                        return product
-            else:
-                return 1.0
-        ignore_root_factor = list(reduce(lambda x,y : x*y ,map(calculations, ignore_roots)))
-        return (self.get_position_probability(pos.add(Vec2(self._epsilon, 0))) - self.get_position_probability(pos)) / self._epsilon * ignore_root_factor
+        return ((self.get_position_probability(pos.add(Vec2(self._epsilon, 0)))
+            - self.get_position_probability(pos))
+            / self._epsilon
+            * self._calculate_ignore_root_factor_2d(pos, ignore_roots))
     
     def get_position_probability_dy(self, pos, ignore_roots):
-        return (self.get_position_probability(pos.add(Vec2(0, self._epsilon))) - self.get_position_probability_dy(pos)) / self._epsilon
+        return ((self.get_position_probability(pos.add(Vec2(0, self._epsilon)))
+            - self.get_position_probability_dy(pos))
+            / self._epsilon
+            * self._calculate_ignore_root_factor_2d(pos, ignore_roots))
     
-    def get_positional_probability_dx_gradient(self, pos, ignore_roots):
+    def get_position_probability_dx_gradient(self, pos, ignore_roots):
         z = self.get_position_probability_dx(pos, ignore_roots)
         wrtX = (self.get_position_probability_dx(pos.add(Vec2(self._epsilon, 0)), ignore_roots) - z) / self._epsilon
         wrtY = (self.get_position_probability_dx(pos.add(Vec2(0, self._epsilon)), ignore_roots) - z) / self._epsilon
@@ -79,20 +70,40 @@ class AbstractFinDiffLocalizationData(LocalizationData):
         return Vec2(wrtX, wrtY)
     
     def get_rotation_probability_dx(self, rot, ignore_roots):
-        def calculate(a, b):
-            if a is not None and b is not None:
-                x = rot
-                while True:
-                    if not math.isfinite(product):
-                        product = a / (_x - b)
-                        x = x + self._epsilon
-                    else:
-                        return product
-            else:
-                return 1.0
-        ignore_root_factor = list(reduce(lambda x,y: calculate(x,y), ignore_roots))
-        # Question: in the code it just says get_rotational_probability, does it need to be with respect to x or y or some other thing?
-        return (self.get_rotational_probability(rot + self._epsilon) - self.get_rotational_probability(rot)) / self._epsilon * ignore_root_factor
+        return ((self.get_rotation_probability(rot + self._epsilon)
+            - self.get_rotational_probability(rot))
+            / self._epsilon
+            * ignore_root_factor)
+
+    def _calculate_ignore_root_factor_2d(self, pos, ignore_roots):
+        ignore_root_factor = 1
+        for root in ignore_roots:
+            product = math.inf
+            negative_center = pos.mul(-1)
+            epsilon_vec = Vec2(self._epsilon, self._epsilon)
+            while True:
+                if not math.isfinite(product):
+                    diff = negative_center.add(b)
+                    factor = 1 / (diff.dot(diff) + 1) - 1
+                    product = 1 / factor
+                    negative_center = negative_center.add(epsilon_vec)
+                else:
+                    ignore_root_factor *= product
+                    break
+        return ignore_root_factor
+    
+    def _calculate_ignore_root_factor_1d(self, pos, ignore_roots):
+        ignore_root_factor = 1
+        for root in ignore_roots:
+            x = rot
+            while True:
+                if not math.isfinite(product):
+                    product = a / (x - b)
+                    x = x + self._epsilon
+                else:
+                    ignore_root_factor *= product
+                    break
+        return ignore_root_factor
 
 
 class LocalizationSource(ABC):
