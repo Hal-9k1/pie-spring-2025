@@ -10,35 +10,35 @@ import math
 class LocalizationData(ABC):
     @abstractmethod
     def get_position_probability(self, pos):
-        pass
+        raise NotImplementedError
 
     @abstractmethod
     def get_position_probability_dx(self, pos, ignore_roots):
-        pass
+        raise NotImplementedError
 
     @abstractmethod
     def get_position_probability_dy(self, pos, ignore_roots):
-        pass
+        raise NotImplementedError
 
     @abstractmethod
     def get_positional_probability_dx_gradient(self, pos, ignore_roots):
-        pass
+        raise NotImplementedError
 
     @abstractmethod
     def get_position_probability_dy_gradient(self, pos, ignore_roots):
-        pass
+        raise NotImplementedError
 
     @abstractmethod
     def get_rotation_probability(self, rot):
-        pass
+        raise NotImplementedError
 
     @abstractmethod
     def get_rotation_probability_dx(self, rot, ignore_roots):
-        pass
+        raise NotImplementedError
 
     @abstractmethod
     def get_rotation_probability_dx2(self, rot, ignore_roots):
-        pass
+        raise NotImplementedError
 
     
 class AbstractFinDiffLocalizationData(LocalizationData):
@@ -188,7 +188,7 @@ class RobotLocalizer(Layer):
 
     @abstractmethod
     def invalidate_cache():
-        pass
+        raise NotImplementedError
 
     @abstractmethod
     def register_source(self, source: LocalizationSource):
