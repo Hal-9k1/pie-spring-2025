@@ -90,3 +90,11 @@ class SampleProgrammedDriveLayer(AbstractQueuedLayer):
     def map_to_subtasks(self, task):
         assert(isinstance(task, WinTask))
         return [AxialMovementTask(1), TurnTask(math.pi / 2)] * 4
+
+
+class NoopAutonomousOpmode(AbstractOpmode):
+    def get_layers(self, gamepad, keyboard):
+        return LayerGraph()
+
+    def get_robot_spec(self):
+        return {}
