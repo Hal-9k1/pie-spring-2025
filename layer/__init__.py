@@ -110,7 +110,7 @@ class AbstractQueuedLayer(Layer):
     def subtask_completed(self, task):
         if self._emitted == task:
             self._advance()
-            self._logger.info('subtask completed, will emit on next process')
+            #self._logger.info('subtask completed, will emit on next process')
 
     def _advance(self):
         if not self._next_subtask:
@@ -125,7 +125,7 @@ class AbstractQueuedLayer(Layer):
                 self._task = None
             ctx.request_task()
         if self._next_subtask:
-            self._logger.info('emitting')
+            #self._logger.info('emitting')
             ctx.emit_subtask(self._next_subtask)
             self._emitted = self._next_subtask
             self._next_subtask = None

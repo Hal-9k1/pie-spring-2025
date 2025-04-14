@@ -118,7 +118,7 @@ class TwoWheelDrive(Layer):
             self._right_goal_delta = (task.get_angle() * self.WHEEL_SPAN_RADIUS * self.GEAR_RATIO
                 * self.RIGHT_ENCODER_FAC)
 
-        self._logger.info(f'task: {task} left: {self._left_goal_delta} right: {self._right_goal_delta}')
+        #self._logger.info(f'task: {task} left: {self._left_goal_delta} right: {self._right_goal_delta}')
         if not self._should_request_task:
             self._left_start_pos = self._left_wheel.get_distance()
             self._right_start_pos = self._right_wheel.get_distance()
