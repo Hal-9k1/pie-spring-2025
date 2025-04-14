@@ -6,6 +6,7 @@ from matrix import Vec2
 from task.sensory import LocalizationTask
 import math
 
+
 class LocalizationData(ABC):
     @abstractmethod
     def get_position_probability(self, pos):
@@ -47,16 +48,16 @@ class AbstractFinDiffLocalizationData(LocalizationData):
     def get_position_probability_dx(self, pos, ignore_roots):
         def calculations(b):
             if b is not None:
-                _negative_center = pos.mul(-1)
-                _epsilon_vec = Vec2(self.epsilon, self.epsilon)
+                negative_center = pos.mul(-1)
+                epsilon_vec = Vec2(self.epsilon, self.epsilon)
                 while True:
-                    if(math.isfinite(_product) is not True):
-                        _diff = _negative_center.add(b)
-                        _factor = 1.0 / (_diff.dot(_diff) + 1.0) - 1.0
-                        _product = 1.0 / _factor
-                        _negative_center = _negative_center.add(_epsilon_vec)
+                    if math.isfinite(product) is not True:
+                        diff = negative_center.add(b)
+                        factor = 1.0 / (_diff.dot(_diff) + 1.0) - 1.0
+                        product = 1.0 / _factor
+                        negative_center = negative_center.add(epsilon_vec)
                     else:
-                        return _product
+                        return product
             else:
                 return 1.0
         ignore_root_factor = list(reduce(lambda x,y : x*y ,map(calculations, ignore_roots)))
@@ -79,14 +80,14 @@ class AbstractFinDiffLocalizationData(LocalizationData):
     
     def get_rotation_probability_dx(self, rot, ignore_roots):
         def calculate(a, b):
-            if (a is not None and b is not None):
-                _x = rot
+            if a is not None and b is not None:
+                x = rot
                 while True:
-                    if not math.isfinite(_product):
-                        _product = a / (_x - b)
-                        _x = _x + self._epsilon
+                    if not math.isfinite(product):
+                        product = a / (_x - b)
+                        x = x + self._epsilon
                     else:
-                        return _product
+                        return product
             else:
                 return 1.0
         ignore_root_factor = list(reduce(lambda x,y: calculate(x,y), ignore_roots))
@@ -96,47 +97,25 @@ class AbstractFinDiffLocalizationData(LocalizationData):
 
 class LocalizationSource(ABC):
     @abstractmethod
-    def canLocalizePosition():
-        pass
+    def can_localize_position():
+        raise NotImplementedError
 
     @abstractmethod
-    def canLocalizeRotation():
-        pass
+    def can_localize_rotation():
+        raise NotImplementedError
 
     @abstractmethod
-    def collectData():
-        pass
-
-
-class RobotLocalizer(ABC):
-    @abstractmethod
-    def invalidateCache():
-        pass
-
-    @abstractmethod
-    def registerSource(source):
-        pass
-
-    @abstractmethod
-    def resolveTransform():
-        pass
-
-    @abstractmethod
-    def resolvePosition():
-        pass
-
-    @abstractmethod
-    def resolveRotation():
-        pass
+    def collect_data():
+        raise NotImplementedError
 
 
 class SqFalloffLocalizationData(AbstractFinDiffLocalization):
-    def __init__(self, _epsilon, transform, accuracy, _position_precision, _rotation_precision):
-        super().__init__(_epsilon)
+    def __init__(self, epsilon, transform, accuracy, position_precision, rotation_precision):
+        super().__init__(epsilon)
         self._transform = transform
         self._accuracy = accuracy
-        self._position_precision = _position_precision
-        self._rotation_precision = _rotation_precision
+        self._position_precision = position_precision
+        self._rotation_precision = rotation_precision
 
     def get_position_probability(self, pos):
         diff = self._transform.get_translation().mul(-1).add(pos)
