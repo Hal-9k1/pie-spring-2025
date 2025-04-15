@@ -48,7 +48,7 @@ class TwoWheelDrive(Layer):
                 setup_info.get_logger('Right wheel motor'),
                 self.RIGHT_DRIVE_MOTOR_NAME,
                 'a'
-            ).set_invert(False),
+            ).set_invert(True),
             self.WHEEL_RADIUS,
             self.RIGHT_INTERNAL_GEARING * self.TICKS_PER_REV
         )
@@ -59,7 +59,7 @@ class TwoWheelDrive(Layer):
                 setup_info.get_logger('Left wheel motor'),
                 self.LEFT_DRIVE_MOTOR_NAME,
                 'b'
-            ).set_invert(True),
+            ).set_invert(False),
             self.WHEEL_RADIUS,
             self.LEFT_INTERNAL_GEARING * self.TICKS_PER_REV
         )

@@ -11,7 +11,8 @@ class Motor:
         self._is_inverted = False
         self._logger = logger
     def set_invert(self, invert):
-        self._set("invert", invert)
+        #self._set("invert", invert)
+        self._set("invert", False)
         self._is_inverted = invert
         return self
     def set_deadband(self, deadband):
