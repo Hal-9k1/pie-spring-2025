@@ -5,6 +5,7 @@ from controller import RobotController
 from layer import AbstractQueuedLayer
 from layer import WinLayer
 from layer.drive import TwoWheelDrive
+from layer.input import KeyboardInputGenerator
 from layer.input import GamepadInputGenerator
 from layer.input import XboxGamepadInputGenerator
 from layer.mapping import TankDriveMapping
@@ -59,7 +60,9 @@ class AbstractOpmode(ABC):
 class TwoWheelDriveTeleopOpmode(AbstractOpmode):
     def get_layers(self, gamepad, keyboard):
         lg = LayerGraph()
-        lg.add_chain([XboxGamepadInputGenerator(gamepad), ZeldaDriveMapping(), TwoWheelDrive()])
+        zelda = ZeldaDriveMapping()
+        lg.add_chain([XboxGamepadInputGenerator(gamepad), zelda, TwoWheelDrive()])
+        lg.add_connection(KeyboardInputGenerator(keyboard), zelda)
         return lg
 
     def get_robot_spec(self):

@@ -8,7 +8,7 @@ from log import Logger
 from log import LoggerProvider
 from log import StdioBackend
 
-auto_opmode = opmodes.NoopAutonomousOpmode()
+auto_opmode = opmodes.SampleAutonomousOpmode()
 teleop_opmode = opmodes.TwoWheelDriveTeleopOpmode()
 
 FORCE_MOCK_ROBOT = False

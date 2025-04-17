@@ -9,11 +9,15 @@ class Motor:
         self._motor = motor
         self._robot = robot
         self._is_inverted = False
+        self._is_encoder_inverted = False
         self._logger = logger
     def set_invert(self, invert):
         #self._set("invert", invert)
         self._set("invert", False)
         self._is_inverted = invert
+        return self
+    def set_encoder_invert(self, invert):
+        self._is_encoder_inverted = invert
         return self
     def set_deadband(self, deadband):
         self._set("deadband", deadband)
@@ -33,7 +37,8 @@ class Motor:
     def get_velocity(self):
         return self._get("velocity")
     def get_encoder(self):
-        return self._get("enc") * (-1 if self._is_inverted else 1)
+        return (self._get("enc") * (-1 if self._is_inverted else 1)
+            * (-1 if self._is_encoder_inverted else 1))
     def get_angle(self, ticks_per_rot):
         return self.get_encoder() / ticks_per_rot * 2 * math.pi
     def reset_encoder(self):

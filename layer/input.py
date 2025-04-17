@@ -1,5 +1,6 @@
 from layer import Layer
 from task.input import GamepadInputTask
+from task.input import KeyboardInputTask
 
 
 class GamepadInputGenerator(Layer):
@@ -80,6 +81,7 @@ class KeyboardInputGenerator(Layer):
 
     def __init__(self, keyboard):
         self._keyboard = keyboard
+        self._last_log = 0
 
     def get_input_tasks(self):
         return set()
@@ -89,6 +91,10 @@ class KeyboardInputGenerator(Layer):
 
     def process(self, ctx):
         ctx.emit_subtask(KeyboardInputTask({k: self._keyboard.get_value(k) for k in self.KEYS}))
+        if time.time() - self._last_log > 1:
+            self._last_log = time.time()
+            for k in self.KEYS:
+                print(self._keyboard.get_value(k))
 
     def accept_task(self, task):
         raise TypeError
