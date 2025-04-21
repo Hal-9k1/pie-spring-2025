@@ -8,28 +8,27 @@ from task.drive import AxialMovementTask
 from task.drive import TankDriveTask
 from task.drive import TurnTask
 from units import convert
-import time
 
 
 class TwoWheelDrive(Layer):
     """Drive layer for a two-wheel drive robot."""
 
-    LEFT_DRIVE_MOTOR_NAME = '6_5011048539317462848' #'6_3008899486804881237'
-    RIGHT_DRIVE_MOTOR_NAME = '6_5011048539317462848' #'6_3008899486804881237'
+    LEFT_DRIVE_MOTOR_NAME = '6_3008899486804881237'
+    RIGHT_DRIVE_MOTOR_NAME = '6_3008899486804881237'
     WHEEL_RADIUS = convert(2, 'in', 'm')
     # Wheel teeth / hub teeth:
     GEAR_RATIO = 84 / 36
-    WHEEL_SPAN_RADIUS = convert(18, 'cm', 'm') #convert(14.5 / 2, 'in', 'm')
+    WHEEL_SPAN_RADIUS = convert(14.5 / 2, 'in', 'm')
     # Encoder fac = required wheel distance / distance calculated from task
     LEFT_ENCODER_FAC = 1
     RIGHT_ENCODER_FAC = 1
 
     # Encoder fac = multiplied by power
-    LEFT_POWER_FAC = 0.75
+    LEFT_POWER_FAC = 1
     RIGHT_POWER_FAC = 1
 
-    LEFT_INTERNAL_GEARING = 70
-    RIGHT_INTERNAL_GEARING = 70
+    LEFT_INTERNAL_GEARING = 30
+    RIGHT_INTERNAL_GEARING = 30
     TICKS_PER_REV = 16
 
     def __init__(self):
@@ -49,8 +48,8 @@ class TwoWheelDrive(Layer):
                 setup_info.get_robot(),
                 setup_info.get_logger('Right wheel motor'),
                 self.RIGHT_DRIVE_MOTOR_NAME,
-                'b'
-            ).set_invert(False).set_encoder_invert(True),
+                'a'
+            ).set_invert(True).set_encoder_invert(False),
             self.WHEEL_RADIUS,
             self.RIGHT_INTERNAL_GEARING * self.TICKS_PER_REV
         )
@@ -60,8 +59,8 @@ class TwoWheelDrive(Layer):
                 setup_info.get_robot(),
                 setup_info.get_logger('Left wheel motor'),
                 self.LEFT_DRIVE_MOTOR_NAME,
-                'a'
-            ).set_invert(False),
+                'b'
+            ).set_invert(False).set_encoder_invert(False),
             self.WHEEL_RADIUS,
             self.LEFT_INTERNAL_GEARING * self.TICKS_PER_REV
         )
@@ -91,7 +90,7 @@ class TwoWheelDrive(Layer):
             left_done = ((left_delta < 0) == (self._left_goal_delta < 0)
                 and abs(left_delta) >= abs(self._left_goal_delta))
             right_delta = self._right_wheel.get_distance() - self._right_start_pos
-            right_done = True or ((right_delta < 0) == (self._right_goal_delta < 0)
+            right_done = ((right_delta < 0) == (self._right_goal_delta < 0)
                 and abs(right_delta) >= abs(self._right_goal_delta))
             if time.time() - self._last_printed > 1:
                 self._last_printed = time.time()
