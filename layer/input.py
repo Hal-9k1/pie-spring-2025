@@ -91,10 +91,6 @@ class KeyboardInputGenerator(Layer):
 
     def process(self, ctx):
         ctx.emit_subtask(KeyboardInputTask({k: self._keyboard.get_value(k) for k in self.KEYS}))
-        if time.time() - self._last_log > 1:
-            self._last_log = time.time()
-            for k in self.KEYS:
-                print(self._keyboard.get_value(k))
 
     def accept_task(self, task):
         raise TypeError
