@@ -8,13 +8,14 @@ from task.drive import AxialMovementTask
 from task.drive import TankDriveTask
 from task.drive import TurnTask
 from units import convert
+import time
 
 
 class TwoWheelDrive(Layer):
     """Drive layer for a two-wheel drive robot."""
 
-    LEFT_DRIVE_MOTOR_NAME = '6_3008899486804881237'
-    RIGHT_DRIVE_MOTOR_NAME = '6_3008899486804881237'
+    LEFT_DRIVE_MOTOR_NAME = '6_6029077965246370240'
+    RIGHT_DRIVE_MOTOR_NAME = '6_6029077965246370240'
     WHEEL_RADIUS = convert(2, 'in', 'm')
     # Wheel teeth / hub teeth:
     GEAR_RATIO = 84 / 36
@@ -110,6 +111,15 @@ class TwoWheelDrive(Layer):
             max_abs_power = max(abs(left), abs(right), 1)
             self._left_wheel.set_velocity(left * self._get_left_max_velocity() / max_abs_power)
             self._right_wheel.set_velocity(right * self._get_right_max_velocity() / max_abs_power)
+            Robot.set_value(
+                '6_2855048599430518311',
+                'velocity_a',
+                -1 * (Gamepad.get_value('dpad_up') - Gamepad.get_value('dpad_down'))
+            )
+            #if time.time() - self._last_printed > 1:
+            #    self._last_printed = time.time()
+            #    self._logger.info(
+            #        f'left {left * self._get_left_max_velocity() / max_abs_power} right {right * self._get_right_max_velocity() / max_abs_power}')
         elif isinstance(task, AxialMovementTask):
             self._should_request_task = False
             self._left_goal_delta = task.get_distance() * self.GEAR_RATIO * self.LEFT_ENCODER_FAC
