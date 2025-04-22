@@ -1,8 +1,8 @@
 from abc import ABC
 from abc import abstractmethod
-from functools import reduce
 from layer import Layer
 from matrix import Vec2
+from matrix import Mat3
 from task.sensory import LocalizationTask
 import math
 
@@ -169,3 +169,45 @@ class RobotLocalizer(Layer):
     @abstractmethod
     def register_source(self, source: LocalizationSource):
         pass
+
+
+def PersistenceLocalizationSource(Layer, LocalizationSource):
+    FIN_DIFF_EPSILON = 0.0001
+    POSITION_PRECISION = 1
+    ROTATION_PRECISION = 1
+
+    def __init__(self, starting_transform):
+        self._data = SqFalloffLocalizationData(
+            self.FIN_DIFF_EPSILON,
+            Mat3.identity(),
+            starting_transform,
+            self.POSITION_PRECISION,
+            self.ROTATION_PRECISION
+        )
+
+    def get_input_tasks(self):
+        return {LocalizationTask}
+
+    def get_output_tasks(self):
+        return set()
+
+    def process(self, ctx):
+        ctx.request_task()
+
+    def accept_task(self, task):
+        self._data = SqFalloffLocalizationData(
+            self.FIN_DIFF_EPSILON,
+            task.get_robot_field_transform(),
+            self.ACCURACY,
+            self.POSITION_PRECISION,
+            self.ROTATION_PRECISION
+        )
+
+    def can_localize_position(self):
+        return True
+
+    def can_localize_rotation(self):
+        return True
+
+    def collect_data(self):
+        return self._data

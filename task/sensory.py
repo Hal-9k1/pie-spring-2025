@@ -9,5 +9,13 @@ class DistanceSensorTask(Task):
     def get_distance(self):
         return self._distance
 
-    def get_robot_space_transform(self):
+    def get_sensor_robot_space_transform(self):
+        return self._transform
+
+
+class LocalizationTask(Task):
+    def __init__(self, transform):
+        self._transform = transform
+
+    def get_robot_field_transform(self):
         return self._transform
