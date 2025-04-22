@@ -3,6 +3,7 @@ from abc import abstractmethod
 from layer import Layer
 from matrix import Vec2
 from matrix import Mat3
+from task.sensory import DistanceSensorTask
 from task.sensory import LocalizationTask
 import math
 
@@ -211,3 +212,29 @@ def PersistenceLocalizationSource(Layer, LocalizationSource):
 
     def collect_data(self):
         return self._data
+
+
+def StaticObstacleLocalizationSource(Layer, LocalizationSource):
+    def __init__(self):
+        raise NotImplementedError
+
+    def get_input_tasks(self):
+        return {LocalizationTask, DistanceSensorTask}
+
+    def get_output_tasks(self):
+        return set()
+
+    def process(self, ctx):
+        raise NotImplementedError
+
+    def accept_task(self, task):
+        raise NotImplementedError
+
+    def can_localize_position(self):
+        return True
+
+    def can_localize_rotation(self):
+        return True
+
+    def collect_data(self):
+        raise NotImplementedError
