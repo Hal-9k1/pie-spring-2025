@@ -20,6 +20,9 @@ class TankDriveMapping(AbstractFunctionLayer):
 
 
 class ZeldaDriveMapping(AbstractFunctionLayer):
+    def setup(self, setup_info):
+        self._logger = setup_info.get_logger('ZeldaDriveMapping')
+
     def get_input_tasks(self):
         return {GamepadInputTask, KeyboardInputTask}
 

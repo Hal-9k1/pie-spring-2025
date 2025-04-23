@@ -108,7 +108,7 @@ class RobotController:
         self._teardown_listeners = []
 
     def update(self):
-        self._logger.trace('Begin update')
+        #self._logger.trace('Begin update')
         for listener in self._update_listeners:
             listener()
         if self._layers == None:
@@ -119,7 +119,7 @@ class RobotController:
 
         while hot:
             layer = hot.pop()
-            self._logger.trace(f'Now processing {str(layer)}')
+            #self._logger.trace(f'Now processing {str(layer)}')
             completed_tasks = []
             subtasks = []
             escalate = False

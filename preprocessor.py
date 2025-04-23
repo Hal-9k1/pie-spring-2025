@@ -165,7 +165,7 @@ def process_file(file_path, indent=" " * 4, module_name=None, module_list=None, 
                 f"{indent * 4}tb = tb.tb_next",
                 f"{indent * 3}print('\\n'.join(frame_lines))",
                 f"{indent * 3}print(type(e).__name__ + (': ' if str(e) else '') + str(e))",
-                f"{indent * 3}exit(1)",
+                f"{indent * 3}raise",
                 f"{indent}return wrapped",
                 f"def _HELPER_translate_line_no(line_no):",
             ]

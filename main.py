@@ -46,8 +46,28 @@ def get_robot_interfaces(use_input, robot_spec):
 
 @_PREP_ENTRY_POINT
 def autonomous():
-    auto_opmode.run(*get_robot_interfaces(False, auto_opmode.get_robot_spec()))
+    auto_opmode.setup(*get_robot_interfaces(False, auto_opmode.get_robot_spec()))
+    while True:
+        auto_opmode.loop()
+
+@_PREP_ENTRY_POINT
+def autonomous_setup():
+    auto_opmode.setup(*get_robot_interfaces(False, auto_opmode.get_robot_spec()))
+
+@_PREP_ENTRY_POINT
+def autonomous_main():
+    auto_opmode.loop()
 
 @_PREP_ENTRY_POINT
 def teleop():
-    teleop_opmode.run(*get_robot_interfaces(True, teleop_opmode.get_robot_spec()))
+    teleop_opmode.setup(*get_robot_interfaces(True, teleop_opmode.get_robot_spec()))
+    while True:
+        teleop_opmode.loop()
+
+@_PREP_ENTRY_POINT
+def teleop_setup():
+    teleop_opmode.setup(*get_robot_interfaces(True, teleop_opmode.get_robot_spec()))
+
+@_PREP_ENTRY_POINT
+def teleop_main():
+    teleop_opmode.loop()
