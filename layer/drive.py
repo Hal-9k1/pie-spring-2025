@@ -111,11 +111,6 @@ class TwoWheelDrive(Layer):
             max_abs_power = max(abs(left), abs(right), 1)
             self._left_wheel.set_velocity(left * self._get_left_max_velocity() / max_abs_power)
             self._right_wheel.set_velocity(right * self._get_right_max_velocity() / max_abs_power)
-            Robot.set_value(
-                '6_2855048599430518311',
-                'velocity_a',
-                -1 * (Gamepad.get_value('dpad_up') - Gamepad.get_value('dpad_down'))
-            )
             #if time.time() - self._last_printed > 1:
             #    self._last_printed = time.time()
             #    self._logger.info(
