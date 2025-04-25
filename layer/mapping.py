@@ -22,6 +22,10 @@ class TankDriveMapping(AbstractFunctionLayer):
 class ZeldaDriveMapping(AbstractFunctionLayer):
     def setup(self, setup_info):
         self._logger = setup_info.get_logger('ZeldaDriveMapping')
+        self._gp_fwd = 0
+        self._gp_ccw = 0
+        self._kb_fwd = 0
+        self._kb_ccw = 0
 
     def get_input_tasks(self):
         return {GamepadInputTask, KeyboardInputTask}
@@ -31,13 +35,15 @@ class ZeldaDriveMapping(AbstractFunctionLayer):
 
     def map(self, task):
         if isinstance(task, GamepadInputTask):
-            fwd = task.joysticks.left.y
-            cw = task.joysticks.left.x
+            self._gp_fwd = task.joysticks.left.y
+            self._gp_ccw = -task.joysticks.left.x
         elif isinstance(task, KeyboardInputTask):
-            fwd = task.get('w') - task.get('s')
-            cw = task.get('d') - task.get('a')
+            self._kb_fwd = task.get('w') - task.get('s')
+            self._kb_ccw = task.get('a') - task.get('d')
         else:
             raise TypeError(f'Bad task type of {task}')
-        left = fwd + cw
-        right = fwd - cw
+        fwd = self._gp_fwd if abs(self._gp_fwd > self._kb_fwd) else self._kb_fwd
+        ccw = self._gp_ccw if abs(self._gp_ccw > self._kb_ccw) else self._kb_ccw
+        left = fwd - ccw
+        right = fwd + ccw
         return TankDriveTask(left, right)

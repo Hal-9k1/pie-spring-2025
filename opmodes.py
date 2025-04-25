@@ -15,6 +15,7 @@ from task import WinTask
 from task.drive import AxialMovementTask
 from task.drive import TurnTask
 import math
+import time
 
 class AbstractOpmode(ABC):
     @abstractmethod
@@ -50,8 +51,13 @@ class AbstractOpmode(ABC):
         )
 
         self._finished = False
+        self._logger.log('Setup finished.')
+        self._init_time = time.time()
 
     def loop(self):
+        if self._init_time and time.time() - self._init_time > 5:
+            self._logger.log('Robot is alive 5 seconds into opmode')
+            self._init_time = None
         if not self._finished and self._controller.update():
             self._logger.warn('Opmode finished.')
             self._finished = True
