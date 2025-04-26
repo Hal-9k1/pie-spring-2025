@@ -8,13 +8,12 @@ from task.drive import AxialMovementTask
 from task.drive import TankDriveTask
 from task.drive import TurnTask
 from units import convert
-import time
 
 
 class TwoWheelDrive(Layer):
     """Drive layer for a two-wheel drive robot."""
 
-    DRIVE_MOTOR_NAME = '6_12376238276098875264'
+    DRIVE_MOTOR_NAME = '6_6029077965246370240'
     WHEEL_RADIUS = convert(2, 'in', 'm')
     # Wheel teeth / hub teeth:
     GEAR_RATIO = 84 / 36
