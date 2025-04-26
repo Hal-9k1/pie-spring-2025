@@ -142,3 +142,11 @@ class Servo:
         self._robot = robot
     def set_position(self, position):
         self._robot.set_value(self._controller, "servo" + self._servo, position)
+
+
+class DistanceSensor:
+    def __init__(self, robot, device):
+        self._robot = robot
+        self._device = device
+    def get_distance(self):
+        return self._robot.get_value(self._device, "distance")

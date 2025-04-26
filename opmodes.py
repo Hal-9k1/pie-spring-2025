@@ -10,6 +10,7 @@ from layer.input import GamepadInputGenerator
 from layer.input import XboxGamepadInputGenerator
 from layer.mapping import TankDriveMapping
 from layer.mapping import ZeldaDriveMapping
+from layer.strategy import RatStrategy
 from log import LoggerProvider
 from task import WinTask
 from task.drive import AxialMovementTask
@@ -62,7 +63,7 @@ class TwoWheelDriveTeleopOpmode(AbstractOpmode):
         lg = LayerGraph()
         zelda = ZeldaDriveMapping()
         lg.add_chain([GamepadInputGenerator(gamepad), zelda, TwoWheelDrive()])
-        lg.add_connection(KeyboardInputGenerator(keyboard), zelda)
+        #lg.add_connection(KeyboardInputGenerator(keyboard), zelda)
         return lg
 
     def get_robot_spec(self):
@@ -93,6 +94,18 @@ class SampleProgrammedDriveLayer(AbstractQueuedLayer):
     def map_to_subtasks(self, task):
         assert(isinstance(task, WinTask))
         return [AxialMovementTask(1), TurnTask(math.pi / 2)] * 4
+
+
+class RatAutonomousOpmode(AbstractOpmode):
+    def get_layers(self, gamepad, keyboard):
+        lg = LayerGraph()
+        lg.add_chain([WinLayer(), RatStrategy(), TwoWheelDrive()])
+        return lg
+
+    def get_robot_spec(self):
+        return {
+            'koalabear': 1
+        }
 
 
 class NoopAutonomousOpmode(AbstractOpmode):
