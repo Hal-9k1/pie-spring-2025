@@ -14,8 +14,7 @@ import time
 class TwoWheelDrive(Layer):
     """Drive layer for a two-wheel drive robot."""
 
-    LEFT_DRIVE_MOTOR_NAME = '6_6029077965246370240'
-    RIGHT_DRIVE_MOTOR_NAME = '6_6029077965246370240'
+    DRIVE_MOTOR_NAME = '6_12376238276098875264'
     WHEEL_RADIUS = convert(2, 'in', 'm')
     # Wheel teeth / hub teeth:
     GEAR_RATIO = 84 / 36
@@ -48,7 +47,7 @@ class TwoWheelDrive(Layer):
             Motor(
                 setup_info.get_robot(),
                 setup_info.get_logger('Right wheel motor'),
-                self.RIGHT_DRIVE_MOTOR_NAME,
+                self.DRIVE_MOTOR_NAME,
                 'a'
             ).set_invert(True).set_encoder_invert(False),
             self.WHEEL_RADIUS,
@@ -59,7 +58,7 @@ class TwoWheelDrive(Layer):
             Motor(
                 setup_info.get_robot(),
                 setup_info.get_logger('Left wheel motor'),
-                self.LEFT_DRIVE_MOTOR_NAME,
+                self.DRIVE_MOTOR_NAME,
                 'b'
             ).set_invert(False).set_encoder_invert(False),
             self.WHEEL_RADIUS,
