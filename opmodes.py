@@ -68,6 +68,7 @@ class TwoWheelDriveTeleopOpmode(AbstractOpmode):
     def get_layers(self, gamepad, keyboard):
         lg = LayerGraph()
         zelda = ZeldaDriveMapping()
+        BELT_MOTOR_CONTROLLER = '6_16448980913872547624'
         lg.add_chain([GamepadInputGenerator(gamepad), zelda, TwoWheelDrive()])
         #lg.add_connection(KeyboardInputGenerator(keyboard), zelda)
         return lg

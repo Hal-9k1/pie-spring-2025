@@ -13,7 +13,8 @@ from units import convert
 class TwoWheelDrive(Layer):
     """Drive layer for a two-wheel drive robot."""
 
-    DRIVE_MOTOR_NAME = '6_6029077965246370240'
+    DRIVE_MOTOR_NAME_LEFT = "6_8847060420572259627"
+    DRIVE_MOTOR_NAME = '6_16448980913872547624'
     WHEEL_RADIUS = convert(2, 'in', 'm')
     # Wheel teeth / hub teeth:
     GEAR_RATIO = 84 / 36
@@ -47,7 +48,7 @@ class TwoWheelDrive(Layer):
                 setup_info.get_robot(),
                 setup_info.get_logger('Right wheel motor'),
                 self.DRIVE_MOTOR_NAME,
-                'a'
+                'b'
             ).set_invert(True).set_encoder_invert(False),
             self.WHEEL_RADIUS,
             self.RIGHT_INTERNAL_GEARING * self.TICKS_PER_REV
@@ -57,8 +58,8 @@ class TwoWheelDrive(Layer):
             Motor(
                 setup_info.get_robot(),
                 setup_info.get_logger('Left wheel motor'),
-                self.DRIVE_MOTOR_NAME,
-                'b'
+                self.DRIVE_MOTOR_NAME_LEFT,
+                'a'
             ).set_invert(False).set_encoder_invert(False),
             self.WHEEL_RADIUS,
             self.LEFT_INTERNAL_GEARING * self.TICKS_PER_REV
@@ -110,14 +111,10 @@ class TwoWheelDrive(Layer):
             self._left_wheel.set_velocity(left * self._get_left_max_velocity() / max_abs_power)
             self._right_wheel.set_velocity(right * self._get_right_max_velocity() / max_abs_power)
             Robot.set_value(
-                '6_2855048599430518311',
+                '6_16448980913872547624',
                 'velocity_a',
                 -1 * (Gamepad.get_value('dpad_up') - Gamepad.get_value('dpad_down'))
             )
-            #if time.time() - self._last_printed > 1:
-            #    self._last_printed = time.time()
-            #    self._logger.info(
-            #        f'left {left * self._get_left_max_velocity() / max_abs_power} right {right * self._get_right_max_velocity() / max_abs_power}')
         elif isinstance(task, AxialMovementTask):
             self._should_request_task = False
             self._left_goal_delta = task.get_distance() * self.GEAR_RATIO * self.LEFT_ENCODER_FAC

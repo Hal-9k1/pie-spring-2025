@@ -3,6 +3,7 @@ from task.drive import HolonomicDriveTask
 from task.drive import TankDriveTask
 from task.input import GamepadInputTask
 from task.input import KeyboardInputTask
+from task.peripheral import BeltTask
 
 
 class TankDriveMapping(AbstractFunctionLayer):
@@ -47,3 +48,30 @@ class ZeldaDriveMapping(AbstractFunctionLayer):
         left = fwd - ccw
         right = fwd + ccw
         return TankDriveTask(left, right)
+
+
+class DpadBeltMapping(AbstractFunctionLayer):
+    def get_input_tasks(self):
+        return {GamepadInputTask, KeyboardInputTask}
+
+    def get_output_tasks(self):
+        return {BeltTask}
+
+    def map(self, task):
+        if isinstance(task, GamepadInputTask):
+            return DriveBeltTask(task.dpad.up - task.dpad.down)
+        elif isinstance(task, KeyboardInputTask):
+            return DriveBeltTask(task.get('o') - task.get('p'))
+        else:
+            raise TypeError(f'Bad task type of {task}')
+
+# left trigger drives quickly, right trigger drives slowly
+class TriggerBeltMapping(AbstractFunctionLayer):
+    def get_input_tasks(self):
+        return {GamepadInputTask}
+
+    def get_output_tasks(self):
+        return {BeltTask}
+
+    def map(self, task):
+        return DriveBeltTask(max(task.triggers.left * 1.up - task.dpad.down)
