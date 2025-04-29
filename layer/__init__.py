@@ -5,13 +5,24 @@ from task import WinTask
 
 
 class LayerSetupInfo:
-    def __init__(self, robot, robot_controller, logger_provider):
+    def __init__(self, robot, hw_conf, robot_controller, logger_provider):
         self._robot = robot
+        self._conf = hw_conf
         self._robot_controller = robot_controller
         self._logger_provider = logger_provider
-    
+
     def get_robot(self):
         return self._robot
+
+    def get_device(self, cls, name):
+        if name not in self._conf:
+            raise ValueError('Invalid device name')
+        conf = self._conf[name]
+        if not conf.can_configure(cls):
+            raise ValueError(f'Cannot configure {cls} device with {type(conf)}')
+        device = cls()
+        device.load_conf(robot, conf, self._logger_provider.get_logger(name))
+        return device
 
     def get_logger_provider(self):
         return self._logger_provider.clone()

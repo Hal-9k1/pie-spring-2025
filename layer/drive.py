@@ -45,23 +45,25 @@ class TwoWheelDrive(Layer):
     def setup(self, setup_info):
         self._right_wheel = Wheel(
             setup_info.get_logger('Right wheel'),
-            Motor(
-                setup_info.get_robot(),
-                setup_info.get_logger('Right wheel motor'),
-                self.RIGHT_DRIVE_MOTOR_NAME,
-                'a'
-            ).set_invert(True).set_encoder_invert(False),
+            setup_info.get_device(Motor, 'right_drive_motor')
+            #Motor(
+            #    setup_info.get_robot(),
+            #    setup_info.get_logger('Right wheel motor'),
+            #    self.RIGHT_DRIVE_MOTOR_NAME,
+            #    'a'
+            #).set_invert(True).set_encoder_invert(False),
             self.WHEEL_RADIUS,
             self.RIGHT_INTERNAL_GEARING * self.TICKS_PER_REV
         )
         self._left_wheel = Wheel(
             setup_info.get_logger('Left wheel'),
-            Motor(
-                setup_info.get_robot(),
-                setup_info.get_logger('Left wheel motor'),
-                self.LEFT_DRIVE_MOTOR_NAME,
-                'b'
-            ).set_invert(False).set_encoder_invert(False),
+            setup_info.get_device(Motor, 'left_drive_motor'),
+            #Motor(
+            #    setup_info.get_robot(),
+            #    setup_info.get_logger('Left wheel motor'),
+            #    self.LEFT_DRIVE_MOTOR_NAME,
+            #    'b'
+            #).set_invert(False).set_encoder_invert(False),
             self.WHEEL_RADIUS,
             self.LEFT_INTERNAL_GEARING * self.TICKS_PER_REV
         )

@@ -16,6 +16,7 @@ from task.drive import AxialMovementTask
 from task.drive import TurnTask
 import math
 
+
 class AbstractOpmode(ABC):
     @abstractmethod
     def get_layers(self, gamepad, keyboard):
@@ -34,7 +35,7 @@ class AbstractOpmode(ABC):
     def get_robot_spec(self):
         pass
 
-    def setup(self, logger_provider, robot, gamepad, keyboard):
+    def setup(self, logger_provider, robot, hw_conf, gamepad, keyboard):
         self._controller = RobotController()
 
         lp = logger_provider.clone()
@@ -45,6 +46,7 @@ class AbstractOpmode(ABC):
 
         self._controller.setup(
             robot,
+            hw_conf,
             self.get_layers(gamepad, keyboard),
             lp
         )
