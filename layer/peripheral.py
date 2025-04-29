@@ -1,16 +1,10 @@
-
+from layer import Layer
+from actuators import Motor
 
 
 class BeltLayer(Layer):
-    def __init__(self, motor_controller):
-        self._motor_controller = motor_controller
-
     def setup(self, setup_info):
-        self._motor = Motor(
-            setup_info.get_robot(),
-            self._motor_controller,
-            'a'
-        ).set_invert(True)
+        self._motor = setup_info.get_device(Motor, 'belt_motor')
 
     def get_input_tasks(self):
         return {DriveBeltTask}

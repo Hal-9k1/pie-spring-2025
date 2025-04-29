@@ -18,7 +18,8 @@ class Device(ABC):
 
 
 class MotorConf:
-    def __init__(self, controller_id, channel, invert, encoder_invert, deadband=None, pid=None):
+    def __init__(self, controller_id, channel, invert, encoder_invert,
+            internal_gearing, deadband=None, pid=None):
         self._controller = controller_id
         self._channel = channel
         self._invert = invert
@@ -202,7 +203,7 @@ class ServoConf(DeviceConf):
         self._channel = chanenl
 
     def can_configure(self, cls):
-        return cls == Servo or issubclass(cls, Servo)
+        return cls == Servo
 
 
 class Servo(Device):
@@ -218,9 +219,24 @@ class Servo(Device):
         self._robot.set_value(self._controller, "servo" + self._servo, position)
 
 
-class DistanceSensor:
-    def __init__(self, robot, device):
+class DistanceSensorConf(DeviceConf):
+    def __init__(self, device_id, noise_threshold):
+        self._id = device_id
+        self._noise_threshold = noise_threshold
+
+    def can_configure(self, cls):
+        return cls == DistanceSensor
+
+
+class DistanceSensor(Device):
+    def load_conf(self, robot, conf, logger):
+        self._logger = logger
         self._robot = robot
-        self._device = device
+        self._device = conf._id
+        self._low_threshold = self._noise_threshold
+
+    def can_read(self):
+        return self.get_distance() > self._low_threshold
+
     def get_distance(self):
         return self._robot.get_value(self._device, "distance")
