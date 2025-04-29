@@ -18,7 +18,7 @@ class Device(ABC):
 
 
 class MotorConf:
-    def __init__(self, *, controller_id, channel, invert, encoder_invert, deadband=None, pid=None):
+    def __init__(self, controller_id, channel, invert, encoder_invert, deadband=None, pid=None):
         self._controller = controller_id
         self._channel = channel
         self._invert = invert
@@ -216,3 +216,11 @@ class Servo(Device):
 
     def set_position(self, position):
         self._robot.set_value(self._controller, "servo" + self._servo, position)
+
+
+class DistanceSensor:
+    def __init__(self, robot, device):
+        self._robot = robot
+        self._device = device
+    def get_distance(self):
+        return self._robot.get_value(self._device, "distance")

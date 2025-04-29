@@ -10,7 +10,7 @@ from log import LoggerProvider
 from log import StdioBackend
 
 conf = hwconf.spring_2025
-auto_opmode = opmodes.SampleAutonomousOpmode()
+auto_opmode = opmodes.RatAutonomousOpmode()
 teleop_opmode = opmodes.TwoWheelDriveTeleopOpmode()
 
 FORCE_MOCK_ROBOT = False
