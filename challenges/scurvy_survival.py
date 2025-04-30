@@ -19,7 +19,9 @@ def buy(fruits_to_buy, prices, budget):
         for elem in prices_list:
             for key, value in prices.items():
                 if int(elem) == int(value):
-                    print(display(str(key), int(combinations.count(elem) + 1)), end=' ')
+                    temp.append(display(str(key), int(combinations.count(elem) + 1)))
+        print(''.join(temp))
+        temp.clear()
 
 def display(fruit: str, count: int) -> str:
     assert count >= 1 and fruit[-1] == 's'
