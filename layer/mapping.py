@@ -43,8 +43,8 @@ class ZeldaDriveMapping(AbstractFunctionLayer):
             self._kb_ccw = task.get('a') - task.get('d')
         else:
             raise TypeError(f'Bad task type of {task}')
-        fwd = self._gp_fwd if abs(self._gp_fwd > self._kb_fwd) else self._kb_fwd
-        ccw = self._gp_ccw if abs(self._gp_ccw > self._kb_ccw) else self._kb_ccw
+        fwd = self._gp_fwd if abs(self._gp_fwd) > abs(self._kb_fwd) else self._kb_fwd
+        ccw = self._gp_ccw if abs(self._gp_ccw) > abs(self._kb_ccw) else self._kb_ccw
         left = fwd - ccw
         right = fwd + ccw
         return TankDriveTask(left, right)

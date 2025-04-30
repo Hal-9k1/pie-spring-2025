@@ -5,11 +5,12 @@ from controller import RobotController
 from layer import AbstractQueuedLayer
 from layer import WinLayer
 from layer.drive import TwoWheelDrive
-from layer.input import KeyboardInputGenerator
 from layer.input import GamepadInputGenerator
+from layer.input import KeyboardInputGenerator
 from layer.input import XboxGamepadInputGenerator
 from layer.mapping import TankDriveMapping
 from layer.mapping import ZeldaDriveMapping
+from layer.peripheral import BeltLayer
 from layer.strategy import RatStrategy
 from log import LoggerProvider
 from task import WinTask
@@ -71,7 +72,30 @@ class TwoWheelDriveTeleopOpmode(AbstractOpmode):
         lg = LayerGraph()
         zelda = ZeldaDriveMapping()
         lg.add_chain([GamepadInputGenerator(gamepad), zelda, TwoWheelDrive()])
-        #lg.add_connection(KeyboardInputGenerator(keyboard), zelda)
+        lg.add_connection(KeyboardInputGenerator(keyboard), zelda)
+        return lg
+
+    def get_robot_spec(self):
+        return {
+            'koalabear': 2,
+        }
+
+
+class TWDPeripheralsTeleopOpmode(AbstractOpmode):
+    def get_layers(self, gamepad, keyboard):
+        lg = LayerGraph()
+        zelda = ZeldaDriveMapping()
+        belt = DpadBeltMapping()
+        gp = GamepadInputGenerator(gamepad)
+        kb = KeyboardInputGenerator(keyboard)
+        lg.add_connections([
+            (gp, zelda),
+            (kb, zelda),
+            (gp, belt),
+            (kb, belt),
+            (zelda, TwoWheelDrive()),
+            (belt, BeltLayer()),
+        ])
         return lg
 
     def get_robot_spec(self):
