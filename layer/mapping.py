@@ -3,7 +3,7 @@ from task.drive import HolonomicDriveTask
 from task.drive import TankDriveTask
 from task.input import GamepadInputTask
 from task.input import KeyboardInputTask
-from task.peripheral import BeltTask
+from task.manipulator import DriveBeltTask
 
 
 class TankDriveMapping(AbstractFunctionLayer):
@@ -55,7 +55,7 @@ class DpadBeltMapping(AbstractFunctionLayer):
         return {GamepadInputTask, KeyboardInputTask}
 
     def get_output_tasks(self):
-        return {BeltTask}
+        return {DriveBeltTask}
 
     def map(self, task):
         if isinstance(task, GamepadInputTask):
@@ -71,7 +71,7 @@ class TriggerBeltMapping(AbstractFunctionLayer):
         return {GamepadInputTask}
 
     def get_output_tasks(self):
-        return {BeltTask}
+        return {DriveBeltTask}
 
     def map(self, task):
-        return DriveBeltTask(max(task.triggers.left * 1.up - task.dpad.down)
+        return DriveBeltTask(max(task.triggers.left.up - task.dpad.down))

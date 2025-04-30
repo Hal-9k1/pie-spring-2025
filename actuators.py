@@ -62,7 +62,7 @@ class Motor(Device):
         return self
 
     def set_pid(self, p, i, d):
-        if not all(p, i, d):
+        if not all((p, i, d)):
             self._set("pid_enabled", False) # if unspecified or incomplete set, disable
             return self
         self._set("pid_enabled", True)
@@ -98,7 +98,7 @@ class Motor(Device):
 class PidMotor(Motor):
     """Adds custom PID control to a Motor since PiE's implementation is weird."""
 
-    def __init__(self, robot=None, controller_id=None, motor=None, conf=None):
+    def __init__(self, robot, conf, logger):
         raise NotImplementedError('Need to change this to use hardware configuration')
         super().__init__(robot, controller_id, motor, conf)
         super().set_pid(None, None, None)
@@ -166,8 +166,7 @@ class PidMotor(Motor):
 class MotorPair(Motor):
     """Drives a pair of Motors together as if they were one."""
 
-    def __init__(self, robot=None, controller_id=None, motor_suffix, paired_controller_id,
-            paired_motor_suffix, paired_motor_inverted):
+    def __init__(self, robot, conf, paired_conf, logger):
         raise NotImplementedError('Need to change this to use hardware configuration')
         super().__init__(robot, controller_id, motor_suffix)
         self._paired_motor = Motor(robot, paired_controller_id,
@@ -198,9 +197,9 @@ class MotorPair(Motor):
 
 
 class ServoConf(DeviceConf):
-    def __init__(self, controller, channel):
-        self._controller = controller
-        self._channel = chanenl
+    def __init__(self, controller_id, channel):
+        self._controller = controller_id
+        self._channel = channel
 
     def can_configure(self, cls):
         return cls == Servo
@@ -233,7 +232,7 @@ class DistanceSensor(Device):
         self._logger = logger
         self._robot = robot
         self._device = conf._id
-        self._low_threshold = self._noise_threshold
+        self._low_threshold = conf._noise_threshold
 
     def can_read(self):
         return self.get_distance() > self._low_threshold

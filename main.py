@@ -9,9 +9,11 @@ from log import Logger
 from log import LoggerProvider
 from log import StdioBackend
 
+# CONFIG. CHANGE THESE.
 conf = hwconf.spring_2025
 auto_opmode = opmodes.RatAutonomousOpmode()
 teleop_opmode = opmodes.TwoWheelDriveTeleopOpmode()
+# DON'T CHANGE ANYTHING BELOW THIS LINE.
 
 FORCE_MOCK_ROBOT = False
 FORCE_MOCK_GAMEPAD = False

@@ -1,5 +1,7 @@
 from actuators import MotorConf
-from actuators import SensorConf
+from actuators import ServoConf
+from actuators import DistanceSensorConf
+
 
 spring_2025 = {
     'left_drive_motor': MotorConf(
@@ -27,8 +29,12 @@ spring_2025 = {
         controller_id = '4_XXXXXXXXXXXXXXXXXXX',
         channel = '0',
     ),
-    'sensor': SensorConf(
-        device_id = '8_XXXXXXXXXXXXX',
-        low_threshold = 2,
+    'sensor': DistanceSensorConf(
+        device_id = "8_4126596456779635307",
+        noise_threshold = 2,
     ),
+}
+
+spring_2024 = {
+
 }

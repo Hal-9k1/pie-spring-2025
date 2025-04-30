@@ -8,10 +8,9 @@ class RatStrategy(Layer):
     NOISE_THRESHOLD = 2
     STOP_THRESHOLD = 3
     DRIVE_SPEED = 0.1
-    SENSOR_ID = "8_4126596456779635307"
 
     def setup(self, setup_info):
-        self._sensor = DistanceSensor(setup_info.get_robot(), self.SENSOR_ID)
+        self._sensor = setup_info.get_device(DistanceSensor, "sensor")
         self._accepted_task = None
         self._emitted_task = None
         self._finished = True

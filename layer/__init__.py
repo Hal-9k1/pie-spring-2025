@@ -21,7 +21,7 @@ class LayerSetupInfo:
         if not conf.can_configure(cls):
             raise ValueError(f'Cannot configure {cls} device with {type(conf)}')
         device = cls()
-        device.load_conf(robot, conf, self._logger_provider.get_logger(name))
+        device.load_conf(self._robot, conf, self._logger_provider.get_logger(name))
         return device
 
     def get_logger_provider(self):

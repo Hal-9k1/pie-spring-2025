@@ -42,7 +42,7 @@ class TwoWheelDrive(Layer):
     def setup(self, setup_info):
         self._right_wheel = Wheel(
             setup_info.get_logger('Right wheel'),
-            setup_info.get_device(Motor, 'right_drive_motor')
+            setup_info.get_device(Motor, 'right_drive_motor'),
             self.WHEEL_RADIUS,
             self.RIGHT_INTERNAL_GEARING * self.TICKS_PER_REV
         )
@@ -98,11 +98,6 @@ class TwoWheelDrive(Layer):
             max_abs_power = max(abs(left), abs(right), 1)
             self._left_wheel.set_velocity(left * self._get_left_max_velocity() / max_abs_power)
             self._right_wheel.set_velocity(right * self._get_right_max_velocity() / max_abs_power)
-            Robot.set_value(
-                '6_16448980913872547624',
-                'velocity_a',
-                -1 * (Gamepad.get_value('dpad_up') - Gamepad.get_value('dpad_down'))
-            )
         elif isinstance(task, AxialMovementTask):
             self._should_request_task = False
             self._left_goal_delta = task.get_distance() * self.GEAR_RATIO * self.LEFT_ENCODER_FAC
