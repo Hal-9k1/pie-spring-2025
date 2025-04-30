@@ -1,5 +1,5 @@
 from layer import Layer
-from actuators import DistanceSensor
+from devices import DistanceSensor
 from task.drive import TankDriveTask
 from task import WinTask
 

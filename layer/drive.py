@@ -1,5 +1,5 @@
 from abc import abstractmethod
-from actuators import Motor
+from devices import Motor
 from layer import Layer
 from layer import LayerSetupInfo
 from math import copysign

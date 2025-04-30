@@ -1,6 +1,6 @@
-from actuators import MotorConf
-from actuators import ServoConf
-from actuators import DistanceSensorConf
+from devices import MotorConf
+from devices import ServoConf
+from devices import DistanceSensorConf
 
 
 spring_2025 = {

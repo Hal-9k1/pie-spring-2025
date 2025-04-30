@@ -1,5 +1,5 @@
 from layer import Layer
-from actuators import Motor
+from devices import Motor
 
 
 class BeltLayer(Layer):
