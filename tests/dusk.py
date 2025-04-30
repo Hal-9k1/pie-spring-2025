@@ -56,10 +56,9 @@ class TestDusk(TestCase):
                     pass
         finally:
             try:
-                dummy_server.shutdown(SHUT_RDWR)
                 dummy_server.close()
-            except (OSError, AttributeError):
-                pass
+            except (OSError, AttributeError) as e:
+                print(f'Caught exception when closing dummy server: {e}')
 
     def _handle_connection(self, cxn):
         while self._server_process:
