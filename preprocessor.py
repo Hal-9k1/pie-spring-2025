@@ -170,11 +170,11 @@ def process_file(file_path, indent=" " * 4, module_name=None, module_list=None, 
                 f"def _HELPER_translate_line_no(line_no):",
             ]
             strings = [string + "\n" for string in strings]
-            running_line_num = len(strings) + 8 + 2 * len(module_list) # two lines added per module
+            running_line_num = len(strings) + 10 + 2 * len(module_list) # two lines added per module
             module_line_entries = []
             for module in module_list:
                 module_line_entries.append(
-                    f"{indent}elif line_no >= {running_line_num}:\n"
+                    f"{indent}elif line_no >= {running_line_num + 5}:\n"
                     f"{indent * 2}return '{module.file_path}', line_no - {running_line_num + 5}\n"
                 )
                 running_line_num += module.body_text.count("\n")
