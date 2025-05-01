@@ -8,9 +8,10 @@ from task.drive import AxialMovementTask
 from task.drive import TankDriveTask
 from task.drive import TurnTask
 from units import convert
+from localization import EncoderDriveSystem
 
 
-class TwoWheelDrive(Layer):
+class TwoWheelDrive(Layer, EncoderDriveSystem):
     """Drive layer for a two-wheel drive robot."""
 
     LEFT_DRIVE_MOTOR_NAME = 'left_front_drive'

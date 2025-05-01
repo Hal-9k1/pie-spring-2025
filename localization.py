@@ -108,6 +108,12 @@ class AbstractFinDiffLocalizationData(LocalizationData):
 
 
 class LocalizationSource(ABC):
+    def on_start(self, start_pos):
+        pass
+
+    def on_update(self):
+        pass
+
     @abstractmethod
     def can_localize_position():
         raise NotImplementedError
@@ -139,8 +145,14 @@ class SqFalloffLocalizationData(AbstractFinDiffLocalization):
 
 
 class RobotLocalizer(Layer):
+    def __init__(self, initial_transform):
+        self._init = True
+        self._should_emit = True
+        self._sources = []
+        self._init_tfm = initial_transform
+
     def setup(self, setup_info):
-        setup_info.add_update_listener(lambda: self.invalidate_cache())
+        setup_info.add_update_listener(lambda: self._on_update())
 
     def get_input_tasks(self):
         return set()
@@ -153,11 +165,23 @@ class RobotLocalizer(Layer):
             self._should_emit = True
 
     def process(self, ctx):
+        if self._init:
+            self._init = False
+            for source in self._sources:
+                source.on_start(self._init_tfm)
         if self._should_emit:
             ctx.emit_subtask(LocalizationTask(self._resolve_transform()))
 
     def accept_task(self):
         raise TypeError
+
+    def _on_update(self):
+        self.invalidate_cache()
+        for source in self._sources:
+            source.on_update()
+
+    def _get_sources(self):
+        return self._sources
 
     @abstractmethod
     def resolve_transform(self):
@@ -237,4 +261,25 @@ def StaticObstacleLocalizationSource(Layer, LocalizationSource):
         return True
 
     def collect_data(self):
+        raise NotImplementedError
+
+
+class EncoderLocalizationSource(Layer, LocalizationSource):
+    def __init__(self, encoder_drive_system):
+        self._drive = encoder_drive_system
+
+    def can_localize_position(self):
+        return True
+
+    def can_localize_rotation(self):
+        return True
+
+
+class EncoderDriveSystem(ABC):
+    @abstractmethod
+    def record_state(self) -> object:
+        raise NotImplementedError
+
+    @abstractmethod
+    def get_state_delta(self, old_state: object, new_state: object) -> Mat3:
         raise NotImplementedError
