@@ -12,7 +12,7 @@ from log import StdioBackend
 # CONFIG. CHANGE THESE.
 conf = hwconf.spring_2025
 auto_opmode = opmodes.RatAutonomousOpmode()
-teleop_opmode = opmodes.TwoWheelDriveTeleopOpmode()
+teleop_opmode = opmodes.TWDPeripheralsTeleopOpmode()
 # DON'T CHANGE ANYTHING BELOW THIS LINE.
 
 FORCE_MOCK_ROBOT = False
