@@ -10,11 +10,13 @@ from layer.input import GamepadInputGenerator
 from layer.input import XboxGamepadInputGenerator
 from layer.mapping import TankDriveMapping
 from layer.mapping import ZeldaDriveMapping
+from layer.strategy import RatStrategy
 from log import LoggerProvider
 from task import WinTask
 from task.drive import AxialMovementTask
 from task.drive import TurnTask
 import math
+import time
 
 class AbstractOpmode(ABC):
     @abstractmethod
@@ -50,8 +52,13 @@ class AbstractOpmode(ABC):
         )
 
         self._finished = False
+        self._logger.log('Setup finished.')
+        self._init_time = time.time()
 
     def loop(self):
+        if self._init_time and time.time() - self._init_time > 5:
+            self._logger.log('Robot is alive 5 seconds into opmode')
+            self._init_time = None
         if not self._finished and self._controller.update():
             self._logger.warn('Opmode finished.')
             self._finished = True
@@ -61,8 +68,9 @@ class TwoWheelDriveTeleopOpmode(AbstractOpmode):
     def get_layers(self, gamepad, keyboard):
         lg = LayerGraph()
         zelda = ZeldaDriveMapping()
+        BELT_MOTOR_CONTROLLER = '6_16448980913872547624'
         lg.add_chain([GamepadInputGenerator(gamepad), zelda, TwoWheelDrive()])
-        lg.add_connection(KeyboardInputGenerator(keyboard), zelda)
+        #lg.add_connection(KeyboardInputGenerator(keyboard), zelda)
         return lg
 
     def get_robot_spec(self):
@@ -93,6 +101,18 @@ class SampleProgrammedDriveLayer(AbstractQueuedLayer):
     def map_to_subtasks(self, task):
         assert(isinstance(task, WinTask))
         return [AxialMovementTask(1), TurnTask(math.pi / 2)] * 4
+
+
+class RatAutonomousOpmode(AbstractOpmode):
+    def get_layers(self, gamepad, keyboard):
+        lg = LayerGraph()
+        lg.add_chain([WinLayer(), RatStrategy(), TwoWheelDrive()])
+        return lg
+
+    def get_robot_spec(self):
+        return {
+            'koalabear': 1
+        }
 
 
 class NoopAutonomousOpmode(AbstractOpmode):
