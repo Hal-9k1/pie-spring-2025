@@ -28,12 +28,15 @@ class MockRobot:
             "pid_kp_b": 0.05,
             "pid_ki_b": 0.035,
             "pid_kd_b": 0.0,
-            "enc_b": 0
+            "enc_b": 0,
         },
         "servocontroller": {
             "servo0": 0.0,
-            "servo1": 0.0
-        }
+            "servo1": 0.0,
+        },
+        "distancesensor": {
+            "distance": 0.0,
+        },
     }
 
     def __init__(self, max_devices, logger_provider, motor_ticks_per_sec=2000, start_pos="left"):

@@ -93,10 +93,11 @@ class RobotController:
     def __init__(self):
         self._layers = None
 
-    def setup(self, robot, layers, logger_provider, debug_mode=False):
+    def setup(self, robot, hw_conf, layers, logger_provider, debug_mode=False):
         self._logger = logger_provider.get_logger("RobotController")
         setup_info = LayerSetupInfo(
             robot,
+            hw_conf,
             self,
             logger_provider
         )

@@ -55,7 +55,10 @@ class TowerForearmTask(Task):
         """
         Constructs a TowerForearmTask.
         """
-        passclass TowerTask(Task):
+        pass
+
+
+class TowerTask(Task):
     """
     Raises or lowers the arm in an arc.
     """
@@ -122,3 +125,31 @@ class TowerTeleopTask(Task):
                  (towards the front of the robot if the tower is fully lowered).
         """
         return self._forearm_swing_power
+
+
+class DriveBeltTask(Task):
+    def __init__(self, forward_power: float):
+        self._power = forward_power
+
+    def get_power(self) -> float:
+        return self._power
+
+
+class DriveWheelBeltTask(Task):
+    def __init__(self, ccw_power: float):
+        self._power = ccw_power
+
+    def get_power(self) -> float:
+        return self._power
+
+
+class DriveButtonPusherTask(Task):
+    def __init__(self, should_change: bool, is_high: bool):
+        self._should_change = should_change
+        self._is_high = is_high
+
+    def should_change(self):
+        return self._should_change
+
+    def is_high(self):
+        return self._is_high

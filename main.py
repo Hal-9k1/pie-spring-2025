@@ -3,13 +3,17 @@ import opmodes
 from mockrobot import MockRobot
 from mockrobot import MockGamepad
 from mockrobot import MockKeyboard
+import hwconf
 from log import FilterBackend
 from log import Logger
 from log import LoggerProvider
 from log import StdioBackend
 
+# CONFIG. CHANGE THESE.
+conf = hwconf.spring_2025
 auto_opmode = opmodes.RatAutonomousOpmode()
-teleop_opmode = opmodes.TwoWheelDriveTeleopOpmode()
+teleop_opmode = opmodes.TWDPeripheralsTeleopOpmode()
+# DON'T CHANGE ANYTHING BELOW THIS LINE.
 
 FORCE_MOCK_ROBOT = False
 FORCE_MOCK_GAMEPAD = False
@@ -42,7 +46,7 @@ def get_robot_interfaces(use_input, robot_spec):
         gamepad = Gamepad if is_dawn_environment and not FORCE_MOCK_GAMEPAD else MockGamepad()
         keyboard = Keyboard if is_dawn_environment and not FORCE_MOCK_KEYBOARD else MockKeyboard()
 
-    return (logger_provider, robot, gamepad, keyboard)
+    return (logger_provider, robot, conf, gamepad, keyboard)
 
 @_PREP_ENTRY_POINT
 def autonomous():

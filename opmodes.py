@@ -5,11 +5,15 @@ from controller import RobotController
 from layer import AbstractQueuedLayer
 from layer import WinLayer
 from layer.drive import TwoWheelDrive
-from layer.input import KeyboardInputGenerator
 from layer.input import GamepadInputGenerator
-from layer.input import XboxGamepadInputGenerator
+from layer.input import KeyboardInputGenerator
+from layer.mapping import ButtonPusherMapping
+from layer.mapping import DpadBeltMapping
 from layer.mapping import TankDriveMapping
 from layer.mapping import ZeldaDriveMapping
+from layer.peripheral import BeltLayer
+from layer.peripheral import ButtonPusherLayer
+from layer.peripheral import WheelBeltLayer
 from layer.strategy import RatStrategy
 from log import LoggerProvider
 from task import WinTask
@@ -17,6 +21,7 @@ from task.drive import AxialMovementTask
 from task.drive import TurnTask
 import math
 import time
+
 
 class AbstractOpmode(ABC):
     @abstractmethod
@@ -36,7 +41,7 @@ class AbstractOpmode(ABC):
     def get_robot_spec(self):
         pass
 
-    def setup(self, logger_provider, robot, gamepad, keyboard):
+    def setup(self, logger_provider, robot, hw_conf, gamepad, keyboard):
         self._controller = RobotController()
 
         lp = logger_provider.clone()
@@ -47,6 +52,7 @@ class AbstractOpmode(ABC):
 
         self._controller.setup(
             robot,
+            hw_conf,
             self.get_layers(gamepad, keyboard),
             lp
         )
@@ -68,14 +74,44 @@ class TwoWheelDriveTeleopOpmode(AbstractOpmode):
     def get_layers(self, gamepad, keyboard):
         lg = LayerGraph()
         zelda = ZeldaDriveMapping()
-        BELT_MOTOR_CONTROLLER = '6_16448980913872547624'
         lg.add_chain([GamepadInputGenerator(gamepad), zelda, TwoWheelDrive()])
-        #lg.add_connection(KeyboardInputGenerator(keyboard), zelda)
+        lg.add_connection(KeyboardInputGenerator(keyboard), zelda)
         return lg
 
     def get_robot_spec(self):
         return {
             'koalabear': 2,
+        }
+
+
+class TWDPeripheralsTeleopOpmode(AbstractOpmode):
+    def get_layers(self, gamepad, keyboard):
+        lg = LayerGraph()
+        zelda = ZeldaDriveMapping()
+        belt_map = DpadBeltMapping(False)
+        front_belt_map = DpadBeltMapping(True)
+        pusher_map = ButtonPusherMapping()
+        gp = GamepadInputGenerator(gamepad)
+        kb = KeyboardInputGenerator(keyboard)
+        lg.add_connections([
+            (gp, zelda),
+            (kb, zelda),
+            (gp, belt_map),
+            (kb, belt_map),
+            (gp, front_belt_map),
+            (kb, front_belt_map),
+            (gp, pusher_map),
+            (kb, pusher_map),
+            (zelda, TwoWheelDrive()),
+            (belt_map, BeltLayer()),
+            (front_belt_map, WheelBeltLayer()),
+            (pusher_map, ButtonPusherLayer()),
+        ])
+        return lg
+
+    def get_robot_spec(self):
+        return {
+            'koalabear': 3,
         }
 
 
@@ -90,6 +126,7 @@ class SampleAutonomousOpmode(AbstractOpmode):
             'koalabear': 2,
             'servocontroller': 2,
         }
+
 
 class SampleProgrammedDriveLayer(AbstractQueuedLayer):
     def get_input_tasks(self):
@@ -111,7 +148,8 @@ class RatAutonomousOpmode(AbstractOpmode):
 
     def get_robot_spec(self):
         return {
-            'koalabear': 1
+            'koalabear': 3,
+            'distancesensor': 1,
         }
 
 
