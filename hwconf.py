@@ -40,8 +40,8 @@ spring_2025 = {
         internal_gearing = 70,
     ),
     'button_pusher_servo': ServoConf(
-        controller_id = '4_XXXXXXXXXXXXXXXXXXX',
-        channel = '0',
+        controller_id = '4_4907772656414335786',
+        channel = '1',
     ),
     'sensor': DistanceSensorConf(
         device_id = '8_4126596456779635307',

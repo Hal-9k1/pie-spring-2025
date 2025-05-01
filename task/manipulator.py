@@ -152,4 +152,4 @@ class DriveButtonPusherTask(Task):
         return self._should_change
 
     def is_high(self):
-        return self._is_highed
+        return self._is_high

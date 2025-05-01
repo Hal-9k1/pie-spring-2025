@@ -53,12 +53,13 @@ class WheelBeltLayer(Layer):
 
 
 class ButtonPusherLayer(Layer):
-    HIGH_POSITION = 180
-    LOW_POSITION = 0
+    HIGH_POSITION = 1
+    LOW_POSITION = -1
 
     def setup(self, setup_info):
         self._servo = setup_info.get_device(Servo, 'button_pusher_servo')
         self._task = None
+        self._init = True
 
     def get_input_tasks(self):
         return {DriveButtonPusherTask}
@@ -67,6 +68,9 @@ class ButtonPusherLayer(Layer):
         return set()
 
     def process(self, ctx):
+        if self._init:
+            self._init = False
+            self._servo.set_position(self.HIGH_POSITION)
         if self._task:
             ctx.complete_task(self._task)
             self._task = None
