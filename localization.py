@@ -174,6 +174,9 @@ class RobotLocalizer(Layer):
     def accept_task(self):
         raise TypeError
 
+    def register_source(self, source):
+        self._sources.append(source)
+
     def _on_update(self):
         self.invalidate_cache()
         for source in self._sources:
@@ -189,10 +192,6 @@ class RobotLocalizer(Layer):
     @abstractmethod
     def invalidate_cache():
         raise NotImplementedError
-
-    @abstractmethod
-    def register_source(self, source: LocalizationSource):
-        pass
 
 
 def PersistenceLocalizationSource(Layer, LocalizationSource):
