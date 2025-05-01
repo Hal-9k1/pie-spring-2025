@@ -1,7 +1,23 @@
 from layer import Layer
+from layer import AbstractQueuedLayer
 from devices import DistanceSensor
 from task.drive import TankDriveTask
 from task import WinTask
+from task.drive import AxialMovementTask
+from task.drive import TankDriveTask
+from devices import DistanceSensor
+
+
+class SampleProgrammedDriveLayer(AbstractQueuedLayer):
+    def get_input_tasks(self):
+        return {WinTask}
+
+    def get_output_tasks(self):
+        return {TurnTask, AxialMovementTask}
+
+    def map_to_subtasks(self, task):
+        assert(isinstance(task, WinTask))
+        return [AxialMovementTask(1), TurnTask(math.pi / 2)] * 4
 
 
 class RatStrategy(Layer):
@@ -42,3 +58,16 @@ class RatStrategy(Layer):
         if isinstance(task, WinTask):
             self._accepted_task = task
             self._finished = False
+
+
+class EscapeTestStrategy(AbstractQueuedLayer):
+    def get_input_tasks(self):
+        return {WinTask}
+
+    def get_output_tasks(self):
+        return {MoveToFieldTask}
+
+    def map_to_subtasks(self, task):
+        return [
+
+        ]
