@@ -3,7 +3,6 @@ from abc import abstractmethod
 from layer import Layer
 from matrix import Vec2
 from matrix import Mat3
-from task.sensory import DistanceSensorTask
 from task.sensory import LocalizationTask
 import math
 
@@ -243,7 +242,7 @@ def StaticObstacleLocalizationSource(Layer, LocalizationSource):
         raise NotImplementedError
 
     def get_input_tasks(self):
-        return {LocalizationTask, DistanceSensorTask}
+        return {LocalizationTask}
 
     def get_output_tasks(self):
         return set()
@@ -267,12 +266,23 @@ def StaticObstacleLocalizationSource(Layer, LocalizationSource):
 class EncoderLocalizationSource(Layer, LocalizationSource):
     def __init__(self, encoder_drive_system):
         self._drive = encoder_drive_system
+        self._state = None
+
+    def on_start(self, start_tfm):
+        self._tfm = start_tfm
+
+    def on_update(self):
+        new_state = self._drive.record_state()
+        if self._state:
+            delta = self._drive.get_state_delta(self._state, new_state)
+            self._tfm = self._tfm.mul(delta)
+        self._state = new_state
 
     def can_localize_position(self):
-        return True
+        return bool(self._state)
 
     def can_localize_rotation(self):
-        return True
+        return bool(self._state)
 
 
 class EncoderDriveSystem(ABC):

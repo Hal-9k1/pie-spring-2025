@@ -113,3 +113,9 @@ class TwoWheelDrive(Layer, EncoderDriveSystem):
             self._right_start_pos = self._right_wheel.get_distance()
             self._left_wheel.set_velocity(copysign(1, self._left_goal_delta))
             self._right_wheel.set_velocity(copysign(1, self._right_goal_delta))
+    
+    def record_state(self):
+        return [self._left_wheel.get_distance(), self._right_wheel.get_distance()]
+
+    def get_state_delta(self, old_state, new_state):
+        delta = [a - b for a, b in zip(old_state, new_state)]
