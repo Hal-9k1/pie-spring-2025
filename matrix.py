@@ -69,6 +69,9 @@ class Mat2:
         if not isinstance(num, int) or num < 0 or num > 1:
             raise ValueError(f'Bad {option} number {num}')
 
+    def __mul__(self, other):
+        return self.mul(other)
+
     def __eq__(self, other):
         return isinstance(other, Mat2) and all(a == b for a, b in zip(self._mat, other._mat))
 
@@ -187,6 +190,9 @@ class Mat3:
         if not isinstance(num, int) or num < 0 or num > 2:
             raise ValueError(f'Bad {option} number {num}')
 
+    def __mul__(self, other):
+        return self.mul(other)
+
     def __eq__(self, other):
         return isinstance(other, Mat3) and all(a == b for a, b in zip(self._mat, other._mat))
 
@@ -241,6 +247,12 @@ class Vec2:
             p = Vec2(0, 1)
         return p
 
+    def __add__(self, other):
+        return self.add(other)
+
+    def __mul__(self, other):
+        return self.mul(other)
+
     def __eq__(self, other):
         return isinstance(other, Vec2) and self._x == other._x and self._y == other._y
 
@@ -274,6 +286,12 @@ class Vec3:
         if not isinstance(index, int) or index < 0 or index > 2:
             raise ValueError(f'Bad index {index}')
         return self._vec[index]
+
+    def __add__(self, other):
+        return self.add(other)
+
+    def __mul__(self, other):
+        return self.mul(other)
 
     def __eq__(self, other):
         return isinstance(other, Vec3) and all(a == b for a, b in zip(self._vec, other._vec))
