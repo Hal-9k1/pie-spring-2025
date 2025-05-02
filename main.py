@@ -11,7 +11,7 @@ from log import StdioBackend
 
 # CONFIG. CHANGE THESE.
 conf = hwconf.spring_2025
-auto_opmode = opmodes.RatAutonomousOpmode()
+auto_opmode = opmodes.EscapeTestAutonomousOpmode()
 teleop_opmode = opmodes.TWDPeripheralsTeleopOpmode()
 # DON'T CHANGE ANYTHING BELOW THIS LINE.
 

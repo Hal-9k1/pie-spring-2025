@@ -22,7 +22,7 @@ class LocalizationData(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def get_positional_probability_dx_gradient(self, pos, ignore_roots):
+    def get_position_probability_dx_gradient(self, pos, ignore_roots):
         raise NotImplementedError
 
     @abstractmethod
@@ -54,7 +54,7 @@ class AbstractFinDiffLocalizationData(LocalizationData):
 
     def get_position_probability_dy(self, pos, ignore_roots):
         return ((self.get_position_probability(pos.add(Vec2(0, self._epsilon)))
-            - self.get_position_probability_dy(pos))
+            - self.get_position_probability(pos))
             / self._epsilon
             * self._calculate_ignore_root_factor_2d(pos, ignore_roots))
 
@@ -72,9 +72,13 @@ class AbstractFinDiffLocalizationData(LocalizationData):
 
     def get_rotation_probability_dx(self, rot, ignore_roots):
         return ((self.get_rotation_probability(rot + self._epsilon)
-            - self.get_rotational_probability(rot))
+            - self.get_rotation_probability(rot))
             / self._epsilon
             * ignore_root_factor)
+
+    def get_rotation_probability_dx2(self, rot, ignore_roots):
+        return (self.get_rotation_probability_dx(rot + self._epsilon, ignore_roots)
+            - self._get_rotation_probability_dx(rot, ignore_roots)) / self._epsilon
 
     def _calculate_ignore_root_factor_2d(self, pos, ignore_roots):
         ignore_root_factor = 1
@@ -166,7 +170,7 @@ class RobotLocalizer(Layer):
             for source in self._sources:
                 source.on_start(self._init_tfm)
         if self._should_emit:
-            ctx.emit_subtask(LocalizationTask(self._resolve_transform()))
+            ctx.emit_subtask(LocalizationTask(self.resolve_transform()))
 
     def accept_task(self):
         raise TypeError
@@ -196,7 +200,8 @@ class NewtonLocalizer(RobotLocalizer):
     MAX_NEWTON_ROOTS = 10
     NEWTON_DISTURBANCE_SIZE = 1
 
-    def __init__(self):
+    def __init__(self, initial_transform):
+        super().__init__(initial_transform)
         self.invalidate_cache()
 
     def invalidate_cache(self):
@@ -224,7 +229,7 @@ class NewtonLocalizer(RobotLocalizer):
                             self._get_data(src).get_position_probability_dx_gradient(xy, pos_roots)
                             + self._get_data(src).get_position_probability_dy_gradient(xy, pos_roots)
                         ) for src in self._sources)
-                        delta = grad * (-err / grad.len())
+                        NewtonLocalizer = grad * (-err / grad.len())
                         if not delta.is_finite():
                             nudge_angle = random() * 2 * math.pi
                             delta = Vec2(
@@ -235,10 +240,10 @@ class NewtonLocalizer(RobotLocalizer):
                 pos_roots.append(xy_min_err)
             # Pick absolute maximum probability from roots
             pos = max(
-                (root, sum(
+                ((root, sum(
                     self._get_data(src).get_position_probability(root)
                     for src in self._sources
-                )) for root in pos_roots,
+                )) for root in pos_roots),
                 key=lambda x: x[1]
             )[0]
             # Find roots of rotation derivative
@@ -267,10 +272,10 @@ class NewtonLocalizer(RobotLocalizer):
                 rot_roots.append(x_min_err)
             # Pick absolute maximum probability from roots
             rot = max(
-                (root, sum(
+                ((root, sum(
                     self._get_data(src).get_rotation_probability(root)
                     for src in self._sources
-                )) for root in pos_roots,
+                )) for root in pos_roots),
                 key=lambda x: x[1]
             )[0]
             # Combine most probable position and rotation into transform
@@ -290,12 +295,13 @@ class PersistenceLocalizationSource(Layer, LocalizationSource):
     FIN_DIFF_EPSILON = 0.0001
     POSITION_PRECISION = 1
     ROTATION_PRECISION = 1
+    ACCURACY = 0.7
 
     def on_start(self, init_transform):
         self._data = SqFalloffLocalizationData(
             self.FIN_DIFF_EPSILON,
-            Mat3.identity(),
             init_transform,
+            self.ACCURACY,
             self.POSITION_PRECISION,
             self.ROTATION_PRECISION
         )
@@ -349,6 +355,11 @@ class StaticObstacleLocalizationSource(Layer, LocalizationSource):
 
 
 class EncoderLocalizationSource(LocalizationSource):
+    FIN_DIFF_EPSILON = 0.0001
+    POSITION_PRECISION = 1
+    ROTATION_PRECISION = 1
+    ACCURACY = 1
+
     def __init__(self, encoder_drive_system):
         self._drive = encoder_drive_system
         self._state = None
@@ -365,6 +376,15 @@ class EncoderLocalizationSource(LocalizationSource):
 
     def has_data(self):
         return self._state != None
+
+    def collect_data(self):
+        return SqFalloffLocalizationData(
+            self.FIN_DIFF_EPSILON,
+            self._tfm,
+            self.ACCURACY,
+            self.POSITION_PRECISION,
+            self.ROTATION_PRECISION
+        )
 
 
 class EncoderDriveSystem(ABC):

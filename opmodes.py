@@ -10,6 +10,7 @@ import layer
 import layer.drive
 import layer.input
 import layer.mapping
+import layer.pathfinding
 import layer.peripheral
 import layer.strategy
 import localization
@@ -111,6 +112,7 @@ class TWDPeripheralsTeleopOpmode(AbstractOpmode):
     def get_robot_spec(self):
         return {
             'koalabear': 3,
+            'servocontroller': 1,
         }
 
 
@@ -143,7 +145,7 @@ class RatAutonomousOpmode(AbstractOpmode):
 
     def get_robot_spec(self):
         return {
-            'koalabear': 1,
+            'koalabear': 2,
             'distancesensor': 1,
         }
 
@@ -155,7 +157,7 @@ class EscapeTestAutonomousOpmode(AbstractOpmode):
         lg = LayerGraph()
         pathfinder = layer.pathfinding.DynwinPathfinder(task.drive.TankDriveTask)
         drive = layer.drive.TwoWheelDrive()
-        localizer = localization.RobotLocalizer(Mat3.from_transform(
+        localizer = localization.NewtonLocalizer(Mat3.from_transform(
             Mat2.from_angle(0),
             Vec2(1.087, 0.356)
         ))
@@ -174,7 +176,7 @@ class EscapeTestAutonomousOpmode(AbstractOpmode):
 
     def get_robot_spec(self):
         return {
-            'koalabear': 1,
+            'koalabear': 2,
             'distancesensor': 1,
         }
 

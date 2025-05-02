@@ -95,6 +95,10 @@ class RobotController:
 
     def setup(self, robot, hw_conf, layers, logger_provider, debug_mode=False):
         self._logger = logger_provider.get_logger("RobotController")
+        self._layers = layers
+        self._debug_mode = debug_mode
+        self._update_listeners = []
+        self._teardown_listeners = []
         setup_info = LayerSetupInfo(
             robot,
             hw_conf,
@@ -103,10 +107,6 @@ class RobotController:
         )
         for layer in layers.get_verts():
             layer.setup(setup_info)
-        self._layers = layers
-        self._debug_mode = debug_mode
-        self._update_listeners = []
-        self._teardown_listeners = []
 
     def update(self):
         #self._logger.trace('Begin update')

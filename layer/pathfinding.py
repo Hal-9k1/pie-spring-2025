@@ -6,9 +6,11 @@ from math import inf
 from math import sin
 from math import sqrt
 from matrix import Mat3
-from os import time
-from task import MoveToFieldTask
-from task import UnsupportedTaskError
+from task.drive import HolonomicDriveTask
+from task.drive import TankDriveTask
+from task.objective import MoveToFieldTask
+from task.sensory import LocalizationTask
+from time import time
 
 def _signum(num):
     return copysign(1, num)
@@ -30,6 +32,7 @@ class DynwinPathfinder(Layer):
         self._output_task_type = output_task_type
         self._task = None
         self._l10n_task = None
+        self._goal = None
 
     def get_input_tasks(self):
         return {MoveToFieldTask, LocalizationTask}
@@ -47,6 +50,8 @@ class DynwinPathfinder(Layer):
 
     def process(self, ctx):
         ctx.request_task()
+        if not self._goal:
+            return
         delta = self._get_transform().inv().mul(self._goal)
         complete = (delta.get_translation().len() < self.GOAL_COMPLETE_EPSILON
             and delta.get_direction().get_angle() < self.GOAL_COMPLETE_EPSILON)
@@ -153,7 +158,7 @@ class DynwinPathfinder(Layer):
             best_trajectory = Trajectory(0, 0, 1)
         self._current_trajectory = best_trajectory
 
-    def _check_dynamic_window(self, t) {
+    def _check_dynamic_window(self, t):
         for frac in range(0, 1, self._CLEARENCE_STEP):
             translation = self._get_trajectory_transform(t, frac).get_translation()
             for obstacle in self._obstacles:
@@ -198,8 +203,8 @@ class DynwinPathfinder(Layer):
             Vec2(t.get_axial(), t.get_lateral()).mul(tf).add(self._initial_velocity.get_translation())
         )
 
-    def _get_transform():
-        return self._localizer.resolve_transform()
+    def _get_transform(self):
+        return self._l10n_task.get_robot_field_transform() if self._l10n_task else Mat3.identity()
 
 
 class Trajectory:

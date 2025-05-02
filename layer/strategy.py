@@ -5,6 +5,7 @@ from task.drive import TankDriveTask
 from task import WinTask
 from task.drive import AxialMovementTask
 from task.drive import TankDriveTask
+from task.objective import MoveToFieldTask
 from devices import DistanceSensor
 
 
