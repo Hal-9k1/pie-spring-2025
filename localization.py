@@ -67,7 +67,7 @@ class AbstractFinDiffLocalizationData(LocalizationData):
     def get_position_probability_dy_gradient(self, pos, ignore_roots):
         z = self.get_position_probability_dy(pos, ignore_roots)
         wrtX = (self.get_position_probability_dy(pos.add(Vec2(self._epsilon, 0)), ignore_roots) - z)
-        wrtY = (self.get_position_probability_dy(pos.add(Vec2(0, self._epsilon))) - z)
+        wrtY = (self.get_position_probability_dy(pos.add(Vec2(0, self._epsilon)), ignore_roots) - z)
         return Vec2(wrtX, wrtY)
 
     def get_rotation_probability_dx(self, rot, ignore_roots):
@@ -88,7 +88,7 @@ class AbstractFinDiffLocalizationData(LocalizationData):
             epsilon_vec = Vec2(self._epsilon, self._epsilon)
             while True:
                 if not math.isfinite(product):
-                    diff = negative_center.add(b)
+                    diff = negative_center.add(root)
                     factor = 1 / (diff.dot(diff) + 1) - 1
                     product = 1 / factor
                     negative_center = negative_center.add(epsilon_vec)
@@ -225,11 +225,14 @@ class NewtonLocalizer(RobotLocalizer):
                         xy_min_err = xy
                         min_err = err
                     if j < self.MAX_NEWTON_STEPS:
-                        grad = sum((
-                            self._get_data(src).get_position_probability_dx_gradient(xy, pos_roots)
-                            + self._get_data(src).get_position_probability_dy_gradient(xy, pos_roots)
-                        ) for src in self._sources)
-                        NewtonLocalizer = grad * (-err / grad.len())
+                        grad = sum(
+                            ((
+                                self._get_data(src).get_position_probability_dx_gradient(xy, pos_roots)
+                                + self._get_data(src).get_position_probability_dy_gradient(xy, pos_roots)
+                            ) for src in self._sources),
+                            start=Vec2.zero()
+                        )
+                        delta = grad * (-err / grad.len())
                         if not delta.is_finite():
                             nudge_angle = random() * 2 * math.pi
                             delta = Vec2(
