@@ -69,5 +69,8 @@ class EscapeTestStrategy(AbstractQueuedLayer):
 
     def map_to_subtasks(self, task):
         return [
-
+            MoveToFieldTask(Mat3.from_transform(
+                Mat2.from_angle(0),
+                Vec2(1.087, 0.356)
+            )),
         ]

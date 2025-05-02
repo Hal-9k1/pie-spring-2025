@@ -291,11 +291,11 @@ class PersistenceLocalizationSource(Layer, LocalizationSource):
     POSITION_PRECISION = 1
     ROTATION_PRECISION = 1
 
-    def __init__(self, starting_transform):
+    def on_start(self, init_transform):
         self._data = SqFalloffLocalizationData(
             self.FIN_DIFF_EPSILON,
             Mat3.identity(),
-            starting_transform,
+            init_transform,
             self.POSITION_PRECISION,
             self.ROTATION_PRECISION
         )
@@ -348,7 +348,7 @@ class StaticObstacleLocalizationSource(Layer, LocalizationSource):
         raise NotImplementedError
 
 
-class EncoderLocalizationSource(Layer, LocalizationSource):
+class EncoderLocalizationSource(LocalizationSource):
     def __init__(self, encoder_drive_system):
         self._drive = encoder_drive_system
         self._state = None

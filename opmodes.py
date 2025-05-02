@@ -3,12 +3,16 @@ from abc import abstractmethod
 from controller import LayerGraph
 from controller import RobotController
 from log import LoggerProvider
+from matrix import Mat2
+from matrix import Mat3
+from matrix import Vec2
 import layer
 import layer.drive
 import layer.input
 import layer.mapping
 import layer.peripheral
 import layer.strategy
+import localization
 import math
 import task.drive
 import time
@@ -143,16 +147,29 @@ class RatAutonomousOpmode(AbstractOpmode):
             'distancesensor': 1,
         }
 
-
+# 0 rotation = rightwards from starting point. positive angles are ccw
+# +x = 0 rotation direction
+# +y = pi/2 radians rotation direction
 class EscapeTestAutonomousOpmode(AbstractOpmode):
     def get_layers(self, gamepad, keyboard):
         lg = LayerGraph()
+        pathfinder = layer.pathfinding.DynwinPathfinder(task.drive.TankDriveTask)
+        drive = layer.drive.TwoWheelDrive()
+        localizer = localization.RobotLocalizer(Mat3.from_transform(
+            Mat2.from_angle(0),
+            Vec2(1.087, 0.356)
+        ))
+        persistence_loc_src = localization.PersistenceLocalizationSource()
+        localizer.register_source(persistence_loc_src)
+        localizer.register_source(localization.EncoderLocalizationSource(drive))
         lg.add_chain([
             layer.WinLayer(),
             layer.strategy.EscapeTestStrategy(),
-            layer.pathfinding.DynwinPathfinder(task.drive.TankDriveTask),
-            layer.drive.TwoWheelDrive(),
+            pathfinder,
+            drive,
         ])
+        lg.add_connection(localizer, pathfinder)
+        lg.add_connection(localizer, persistence_loc_src)
         return lg
 
     def get_robot_spec(self):
