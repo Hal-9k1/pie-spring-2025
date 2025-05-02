@@ -1,12 +1,15 @@
-from layer import Layer
-from layer import AbstractQueuedLayer
 from devices import DistanceSensor
-from task.drive import TankDriveTask
+from devices import DistanceSensor
+from layer import AbstractQueuedLayer
+from layer import Layer
+from matrix import Mat2
+from matrix import Mat3
+from matrix import Vec2
 from task import WinTask
 from task.drive import AxialMovementTask
 from task.drive import TankDriveTask
+from task.drive import TankDriveTask
 from task.objective import MoveToFieldTask
-from devices import DistanceSensor
 
 
 class SampleProgrammedDriveLayer(AbstractQueuedLayer):

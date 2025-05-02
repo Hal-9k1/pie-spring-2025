@@ -76,7 +76,7 @@ class DynwinPathfinder(Layer):
                     self._current_trajectory.get_yaw()
                 )
             else:
-                axial = self._current_trajectory.get_axial(),
+                axial = self._current_trajectory.get_axial()
                 yaw = -self._current_trajectory.get_yaw()
                 self._emitted_task = TankDriveTask(
                     axial - yaw,
@@ -91,6 +91,7 @@ class DynwinPathfinder(Layer):
         else:
             self._goal = task.get_goal_transform()
             self._last_calc_time = -inf
+            self._should_emit = True
 
     def _evaluate_trajectory(self, trajectory):
         target_angle_score = self._evaluate_target_angle(trajectory) * self.TARGET_ANGLE_COEFF
@@ -136,15 +137,18 @@ class DynwinPathfinder(Layer):
         best_score = -inf
 
         # Represents bounds of the search space.
-        max_bounds = Trajectory(1, 1 if self._output_task_type == HolonomicDriveTask else self._TRAJECTORY_SEARCH_INCREMENT, 1)
+        max_bounds = Trajectory(1, 1 if self._output_task_type == HolonomicDriveTask else self.TRAJECTORY_SEARCH_INCREMENT, 1)
         min_bounds = Trajectory(-1, -1 if self._output_task_type == HolonomicDriveTask else 0, -1)
 
-        inc = self._TRAJECTORY_SEARCH_INCREMENT
+        inc = self.TRAJECTORY_SEARCH_INCREMENT
 
         # Veeeeeeery slow search loop.
-        for a in range(min_bounds.get_axial(), max_bounds.get_axial(), inc):
-            for l in range(min_bounds.get_lateral(), max_bounds.get_lateral(), inc):
-                for y in range(min_bounds.get_yaw(), max_bounds.get_yaw(), inc):
+        for a in range(int((max_bounds.get_axial() - min_bounds.get_axial()) // inc + 1)):
+            a = a * inc + min_bounds.get_axial()
+            for l in range(int((min_bounds.get_lateral() - max_bounds.get_lateral()) // inc + 1)):
+                l = l * inc + min_bounds.get_lateral()
+                for y in range(int((min_bounds.get_yaw() - max_bounds.get_yaw()) // inc + 1)):
+                    y = y * inc + min_bounds.get_yaw()
                     t = Trajectory(a, l, y)
                     if not self._check_dynamic_window(t):
                         continue
@@ -221,6 +225,9 @@ class Trajectory:
 
     def get_yaw(self):
         return self._yaw
+
+    def __repr__(self):
+        return f"Trajectory({self._axial}, {self._lateral}, {self._yaw})"
 
 
 class Obstacle(ABC):

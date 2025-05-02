@@ -1,6 +1,7 @@
 from abc import ABC
 from abc import abstractmethod
 from layer import Layer
+from matrix import Mat2
 from matrix import Mat3
 from matrix import Vec2
 from random import random
@@ -74,30 +75,32 @@ class AbstractFinDiffLocalizationData(LocalizationData):
         return ((self.get_rotation_probability(rot + self._epsilon)
             - self.get_rotation_probability(rot))
             / self._epsilon
-            * ignore_root_factor)
+            * self._calculate_ignore_root_factor_1d(rot, ignore_roots))
 
     def get_rotation_probability_dx2(self, rot, ignore_roots):
         return (self.get_rotation_probability_dx(rot + self._epsilon, ignore_roots)
-            - self._get_rotation_probability_dx(rot, ignore_roots)) / self._epsilon
+            - self.get_rotation_probability_dx(rot, ignore_roots)) / self._epsilon
 
     def _calculate_ignore_root_factor_2d(self, pos, ignore_roots):
+        return 1
         ignore_root_factor = 1
+        epsilon_vec = Vec2(self._epsilon, self._epsilon)
         for root in ignore_roots:
             product = math.inf
-            negative_center = pos.mul(-1)
-            epsilon_vec = Vec2(self._epsilon, self._epsilon)
+            negative_center = pos * -1
             while True:
                 if not math.isfinite(product):
-                    diff = negative_center.add(root)
+                    diff = negative_center + root
                     factor = 1 / (diff.dot(diff) + 1) - 1
-                    product = 1 / factor
-                    negative_center = negative_center.add(epsilon_vec)
+                    product = 1 / factor if factor else math.inf
+                    negative_center += epsilon_vec
                 else:
                     ignore_root_factor *= product
                     break
         return ignore_root_factor
 
     def _calculate_ignore_root_factor_1d(self, pos, ignore_roots):
+        return 1
         ignore_root_factor = 1
         for root in ignore_roots:
             x = rot
@@ -197,7 +200,7 @@ class RobotLocalizer(Layer):
 
 class NewtonLocalizer(RobotLocalizer):
     MAX_NEWTON_STEPS = 40
-    MAX_NEWTON_ROOTS = 10
+    MAX_NEWTON_ROOTS = 4
     NEWTON_DISTURBANCE_SIZE = 1
 
     def __init__(self, initial_transform):
@@ -210,6 +213,7 @@ class NewtonLocalizer(RobotLocalizer):
 
     def resolve_transform(self):
         if not self._cached_tfm:
+            print('l10n start')
             # Find roots of position derivative
             pos_roots = []
             for i in range(self.MAX_NEWTON_ROOTS):
@@ -232,7 +236,7 @@ class NewtonLocalizer(RobotLocalizer):
                             ) for src in self._sources),
                             start=Vec2.zero()
                         )
-                        delta = grad * (-err / grad.len())
+                        delta = grad * (-err / grad.len()) if grad.len() else Vec2(math.inf, math.inf)
                         if not delta.is_finite():
                             nudge_angle = random() * 2 * math.pi
                             delta = Vec2(
@@ -257,18 +261,18 @@ class NewtonLocalizer(RobotLocalizer):
                 min_err = math.inf
                 for j in range(self.MAX_NEWTON_STEPS + 1):
                     err = sum(
-                        self._get_data(src).get_rotation_probability_dx(x, roots)
+                        self._get_data(src).get_rotation_probability_dx(x, rot_roots)
                         for src in self._sources
                     )
                     if err < min_err:
                         x_min_err = x
                         min_err = err
-                    if j < MAX_NEWTON_STEPS:
+                    if j < self.MAX_NEWTON_STEPS:
                         slope = sum(
-                            self._get_data(src).get_rotation_probability_dx2(x, roots)
+                            self._get_data(src).get_rotation_probability_dx2(x, rot_roots)
                             for src in self._sources
                         )
-                        delta = -err / slope
+                        delta = -err / slope if slope else math.inf
                         if not math.isfinite(delta):
                             delta = math.copysign(self.NEWTON_DISTURBANCE_SIZE, random() - 1 / 2)
                         x += delta
@@ -278,7 +282,7 @@ class NewtonLocalizer(RobotLocalizer):
                 ((root, sum(
                     self._get_data(src).get_rotation_probability(root)
                     for src in self._sources
-                )) for root in pos_roots),
+                )) for root in rot_roots),
                 key=lambda x: x[1]
             )[0]
             # Combine most probable position and rotation into transform
@@ -286,6 +290,7 @@ class NewtonLocalizer(RobotLocalizer):
                 Mat2.from_angle(rot),
                 pos
             )
+            print('l10n end')
         return self._cached_tfm
 
     def _get_data(self, source):
