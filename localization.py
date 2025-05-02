@@ -1,8 +1,9 @@
 from abc import ABC
 from abc import abstractmethod
 from layer import Layer
-from matrix import Vec2
 from matrix import Mat3
+from matrix import Vec2
+from random import random
 from task.sensory import LocalizationTask
 import math
 
@@ -107,22 +108,18 @@ class AbstractFinDiffLocalizationData(LocalizationData):
 
 
 class LocalizationSource(ABC):
-    def on_start(self, start_pos):
+    def on_start(self, start_pos: Mat3):
         pass
 
     def on_update(self):
         pass
 
     @abstractmethod
-    def can_localize_position():
+    def has_data(self) -> bool:
         raise NotImplementedError
 
     @abstractmethod
-    def can_localize_rotation():
-        raise NotImplementedError
-
-    @abstractmethod
-    def collect_data():
+    def collect_data() -> LocalizationData:
         raise NotImplementedError
 
 
@@ -190,11 +187,106 @@ class RobotLocalizer(Layer):
         raise NotImplementedError
 
     @abstractmethod
-    def invalidate_cache():
+    def invalidate_cache(self):
         raise NotImplementedError
 
 
-def PersistenceLocalizationSource(Layer, LocalizationSource):
+class NewtonLocalizer(RobotLocalizer):
+    MAX_NEWTON_STEPS = 40
+    MAX_NEWTON_ROOTS = 10
+    NEWTON_DISTURBANCE_SIZE = 1
+
+    def __init__(self):
+        self.invalidate_cache()
+
+    def invalidate_cache(self):
+        self._cached_tfm = None
+        self._data_cache = {}
+
+    def resolve_transform(self):
+        if not self._cached_tfm:
+            # Find roots of position derivative
+            pos_roots = []
+            for i in range(self.MAX_NEWTON_ROOTS):
+                xy = Vec2.zero()
+                xy_min_err = xy
+                min_err = math.inf
+                for j in range(self.MAX_NEWTON_STEPS + 1):
+                    err = sum((
+                        self._get_data(src).get_position_probability_dx(xy, pos_roots)
+                        + self._get_data(src).get_position_probability_dy(xy, pos_roots)
+                    ) for src in self._sources)
+                    if err < min_err:
+                        xy_min_err = xy
+                        min_err = err
+                    if j < self.MAX_NEWTON_STEPS:
+                        grad = sum((
+                            self._get_data(src).get_position_probability_dx_gradient(xy, pos_roots)
+                            + self._get_data(src).get_position_probability_dy_gradient(xy, pos_roots)
+                        ) for src in self._sources)
+                        delta = grad * (-err / grad.len())
+                        if not delta.is_finite():
+                            nudge_angle = random() * 2 * math.pi
+                            delta = Vec2(
+                                math.cos(nudge_angle) * self.NEWTON_DISTURBANCE_SIZE,
+                                math.sin(nudge_angle) * self.NEWTON_DISTURBANCE_SIZE
+                            )
+                        xy += delta
+                pos_roots.append(xy_min_err)
+            # Pick absolute maximum probability from roots
+            pos = max(
+                (root, sum(
+                    self._get_data(src).get_position_probability(root)
+                    for src in self._sources
+                )) for root in pos_roots,
+                key=lambda x: x[1]
+            )[0]
+            # Find roots of rotation derivative
+            rot_roots = []
+            for i in range(self.MAX_NEWTON_ROOTS):
+                x = 0
+                x_min_err = x
+                min_err = math.inf
+                for j in range(self.MAX_NEWTON_STEPS + 1):
+                    err = sum(
+                        self._get_data(src).get_rotation_probability_dx(x, roots)
+                        for src in self._sources
+                    )
+                    if err < min_err:
+                        x_min_err = x
+                        min_err = err
+                    if j < MAX_NEWTON_STEPS:
+                        slope = sum(
+                            self._get_data(src).get_rotation_probability_dx2(x, roots)
+                            for src in self._sources
+                        )
+                        delta = -err / slope
+                        if not math.isfinite(delta):
+                            delta = math.copysign(self.NEWTON_DISTURBANCE_SIZE, random() - 1 / 2)
+                        x += delta
+                rot_roots.append(x_min_err)
+            # Pick absolute maximum probability from roots
+            rot = max(
+                (root, sum(
+                    self._get_data(src).get_rotation_probability(root)
+                    for src in self._sources
+                )) for root in pos_roots,
+                key=lambda x: x[1]
+            )[0]
+            # Combine most probable position and rotation into transform
+            self._cached_tfm = Mat3.from_transform(
+                Mat2.from_angle(rot),
+                pos
+            )
+        return self._cached_tfm
+
+    def _get_data(self, source):
+        if source not in self._data_cache:
+            self._data_cache[source] = source.collect_data()
+        return self._data_cache[source]
+
+
+class PersistenceLocalizationSource(Layer, LocalizationSource):
     FIN_DIFF_EPSILON = 0.0001
     POSITION_PRECISION = 1
     ROTATION_PRECISION = 1
@@ -226,17 +318,14 @@ def PersistenceLocalizationSource(Layer, LocalizationSource):
             self.ROTATION_PRECISION
         )
 
-    def can_localize_position(self):
-        return True
-
-    def can_localize_rotation(self):
+    def has_data(self):
         return True
 
     def collect_data(self):
         return self._data
 
 
-def StaticObstacleLocalizationSource(Layer, LocalizationSource):
+class StaticObstacleLocalizationSource(Layer, LocalizationSource):
     def __init__(self):
         raise NotImplementedError
 
@@ -252,10 +341,7 @@ def StaticObstacleLocalizationSource(Layer, LocalizationSource):
     def accept_task(self, task):
         raise NotImplementedError
 
-    def can_localize_position(self):
-        return True
-
-    def can_localize_rotation(self):
+    def has_data(self):
         return True
 
     def collect_data(self):
@@ -277,10 +363,7 @@ class EncoderLocalizationSource(Layer, LocalizationSource):
             self._tfm = self._tfm.mul(delta)
         self._state = new_state
 
-    def can_localize_position(self):
-        return self._state != None
-
-    def can_localize_rotation(self):
+    def has_data(self):
         return self._state != None
 
 
