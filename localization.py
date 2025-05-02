@@ -126,7 +126,7 @@ class LocalizationSource(ABC):
         raise NotImplementedError
 
 
-class SqFalloffLocalizationData(AbstractFinDiffLocalization):
+class SqFalloffLocalizationData(AbstractFinDiffLocalizationData):
     def __init__(self, epsilon, transform, accuracy, position_precision, rotation_precision):
         super().__init__(epsilon)
         self._transform = transform
