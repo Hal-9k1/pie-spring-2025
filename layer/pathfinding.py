@@ -28,9 +28,11 @@ class DynwinPathfinder(Layer):
         if output_task_type not in (TankDriveTask, HolonomicDriveTask):
             raise ValueError('Invalid output task type')
         self._output_task_type = output_task_type
+        self._task = None
+        self._l10n_task = None
 
     def get_input_tasks(self):
-        return {MoveToFieldTask}
+        return {MoveToFieldTask, LocalizationTask}
 
     def get_output_tasks(self):
         return {self._output_task_type}
@@ -44,6 +46,7 @@ class DynwinPathfinder(Layer):
             self._should_emit = True
 
     def process(self, ctx):
+        ctx.request_task()
         delta = self._get_transform().inv().mul(self._goal)
         complete = (delta.get_translation().len() < self.GOAL_COMPLETE_EPSILON
             and delta.get_direction().get_angle() < self.GOAL_COMPLETE_EPSILON)
@@ -53,7 +56,9 @@ class DynwinPathfinder(Layer):
                 self._emitted_task = self._create_brake_task()
                 ctx.emit_subtask(self._emitted_task)
                 self._should_emit = False
-            ctx.request_task()
+        elif self._l10n_task:
+            ctx.complete_task(self._l10n_task)
+
         if self._should_emit:
             now = time()
             if now - self._last_calc_time > self.CALCULATE_INTERVAL:
@@ -76,8 +81,11 @@ class DynwinPathfinder(Layer):
             self._should_emit = False
 
     def accept_task(self, task):
-        self._goal = task.get_goal_transform()
-        self._last_calc_time = -inf
+        if isinstance(task, LocalizationTask):
+            self._l10n_task = task
+        else:
+            self._goal = task.get_goal_transform()
+            self._last_calc_time = -inf
 
     def _evaluate_trajectory(self, trajectory):
         target_angle_score = self._evaluate_target_angle(trajectory) * self.TARGET_ANGLE_COEFF
