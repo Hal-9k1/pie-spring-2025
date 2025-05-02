@@ -213,7 +213,6 @@ class NewtonLocalizer(RobotLocalizer):
 
     def resolve_transform(self):
         if not self._cached_tfm:
-            print('l10n start')
             # Find roots of position derivative
             pos_roots = []
             for i in range(self.MAX_NEWTON_ROOTS):
@@ -290,7 +289,6 @@ class NewtonLocalizer(RobotLocalizer):
                 Mat2.from_angle(rot),
                 pos
             )
-            print('l10n end')
         return self._cached_tfm
 
     def _get_data(self, source):

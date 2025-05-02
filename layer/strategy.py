@@ -26,8 +26,8 @@ class SampleProgrammedDriveLayer(AbstractQueuedLayer):
 
 class RatStrategy(Layer):
     NOISE_THRESHOLD = 2
-    STOP_THRESHOLD = 3
-    DRIVE_SPEED = 0.1
+    STOP_THRESHOLD = 20
+    DRIVE_SPEED = 0.2
 
     def setup(self, setup_info):
         self._sensor = setup_info.get_device(DistanceSensor, "sensor")

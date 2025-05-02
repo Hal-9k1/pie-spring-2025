@@ -104,6 +104,8 @@ class TriggerBeltMapping(AbstractFunctionLayer):
 class ButtonPusherMapping(AbstractFunctionLayer):
     def setup(self, setup_info):
         self._is_high = True
+        self._gp_down = False
+        self._kb_down = False
 
     def get_input_tasks(self):
         return {GamepadInputTask, KeyboardInputTask}
