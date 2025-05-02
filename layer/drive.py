@@ -118,4 +118,14 @@ class TwoWheelDrive(Layer, EncoderDriveSystem):
         return [self._left_wheel.get_distance(), self._right_wheel.get_distance()]
 
     def get_state_delta(self, old_state, new_state):
-        delta = [a - b for a, b in zip(old_state, new_state)]
+        [left, right] = [a - b for a, b in zip(old_state, new_state)]
+        robot_width = WHEEL_SPAN_RADIUS * 2
+        robot_center_to_rotation_center = (
+            WHEEL_SPAN_RADIUS
+            + right * robot_width / (left - right)
+        )
+        ntheta = (left - right) / robot_width
+        y = robot_center_to_rotation_center * math.sin(ntheta)
+        x = robot_center_to_rotation_center * math.cos(ntheta)
+        theta = -ntheta
+        return Mat3.from_transform(Mat2.from_angle(theta, Vec2(x, y)))

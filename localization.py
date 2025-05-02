@@ -278,10 +278,10 @@ class EncoderLocalizationSource(Layer, LocalizationSource):
         self._state = new_state
 
     def can_localize_position(self):
-        return bool(self._state)
+        return self._state != None
 
     def can_localize_rotation(self):
-        return bool(self._state)
+        return self._state != None
 
 
 class EncoderDriveSystem(ABC):
