@@ -108,7 +108,12 @@ def process_file(file_path, indent=" " * 4, module_name=None, module_list=None, 
                 #import_only_line = " ".join(line.strip().split(" ")[:after_import_word_idx])
                 import_line = f"{func_call}; "
                 if import_mode == "import":
-                    import_line += f"{imported_module_name} = _HELPER_Module('{imported_module_name}')"
+                    module_segments = imported_module_raw_name.split(".")
+                    for i in range(len(module_segments)):
+                       module_partial = ".".join(module_segments[:i + 1])
+                       module_partial_escaped = escape_module_name(module_partial)
+                       import_line += f"{module_partial} = _HELPER_Module('{module_partial_escaped}'); "
+                    #import_line += f"{imported_module_raw_name} = _HELPER_Module('{imported_module_name}')"
                 elif import_mode == "import as":
                     import_line += f"{words[3]} = _HELPER_Module('{imported_module_name}')"
                 elif import_mode == "from import":
@@ -140,7 +145,7 @@ def process_file(file_path, indent=" " * 4, module_name=None, module_list=None, 
                 f"_HELPER_entry_point_line_nums = [{', '.join(str(num) for num in entry_point_line_nums)}]",
                 f"class _HELPER_Module:",
                 f"{indent}def __init__(self, module_name):",
-                f"{indent * 2}self.__dict__ = _HELPER_module_export_dict[module_name]",
+                f"{indent * 2}self.__dict__ = _HELPER_module_export_dict[module_name] if module_name and module_name in _HELPER_module_export_dict else dict()",
                 f"{indent}def __getitem__(self, key):",
                 f"{indent * 2}return self.__dict__[key]",
                 f"{indent}def __setitem__(self, key, value):",
@@ -175,7 +180,7 @@ def process_file(file_path, indent=" " * 4, module_name=None, module_list=None, 
             for module in module_list:
                 module_line_entries.append(
                     f"{indent}elif line_no >= {running_line_num + 5}:\n"
-                    f"{indent * 2}return '{module.file_path}', line_no - {running_line_num + 5}\n"
+                    f"{indent * 2}return '{module.file_path}', line_no - {running_line_num + 4}\n"
                 )
                 running_line_num += module.body_text.count("\n")
             module_line_entries.append(
