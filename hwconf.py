@@ -44,7 +44,7 @@ spring_2025 = {
         channel = '1',
     ),
     'sensor': DistanceSensorConf(
-        device_id = '8_8943709756401593963',
+        device_id = '8_15421340692729207283',
         noise_threshold = 2,
     ),
 }
