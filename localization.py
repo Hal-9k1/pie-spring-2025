@@ -15,19 +15,19 @@ class LocalizationData(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def get_position_probability_dx(self, pos, ignore_roots):
+    def get_position_probability_dx(self, pos):
         raise NotImplementedError
 
     @abstractmethod
-    def get_position_probability_dy(self, pos, ignore_roots):
+    def get_position_probability_dy(self, pos):
         raise NotImplementedError
 
     @abstractmethod
-    def get_position_probability_dx_gradient(self, pos, ignore_roots):
+    def get_position_probability_dx_gradient(self, pos):
         raise NotImplementedError
 
     @abstractmethod
-    def get_position_probability_dy_gradient(self, pos, ignore_roots):
+    def get_position_probability_dy_gradient(self, pos):
         raise NotImplementedError
 
     @abstractmethod
@@ -35,11 +35,11 @@ class LocalizationData(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def get_rotation_probability_dx(self, rot, ignore_roots):
+    def get_rotation_probability_dx(self, rot):
         raise NotImplementedError
 
     @abstractmethod
-    def get_rotation_probability_dx2(self, rot, ignore_roots):
+    def get_rotation_probability_dx2(self, rot):
         raise NotImplementedError
 
 
@@ -47,71 +47,36 @@ class AbstractFinDiffLocalizationData(LocalizationData):
     def __init__(self, epsilon):
         self._epsilon = epsilon
 
-    def get_position_probability_dx(self, pos, ignore_roots):
+    def get_position_probability_dx(self, pos):
         return ((self.get_position_probability(pos.add(Vec2(self._epsilon, 0)))
             - self.get_position_probability(pos))
-            / self._epsilon
-            * self._calculate_ignore_root_factor_2d(pos, ignore_roots))
+            / self._epsilon)
 
-    def get_position_probability_dy(self, pos, ignore_roots):
+    def get_position_probability_dy(self, pos):
         return ((self.get_position_probability(pos.add(Vec2(0, self._epsilon)))
             - self.get_position_probability(pos))
-            / self._epsilon
-            * self._calculate_ignore_root_factor_2d(pos, ignore_roots))
+            / self._epsilon)
 
-    def get_position_probability_dx_gradient(self, pos, ignore_roots):
-        z = self.get_position_probability_dx(pos, ignore_roots)
-        wrtX = (self.get_position_probability_dx(pos.add(Vec2(self._epsilon, 0)), ignore_roots) - z) / self._epsilon
-        wrtY = (self.get_position_probability_dx(pos.add(Vec2(0, self._epsilon)), ignore_roots) - z) / self._epsilon
+    def get_position_probability_dx_gradient(self, pos):
+        z = self.get_position_probability_dx(pos)
+        wrtX = (self.get_position_probability_dx(pos.add(Vec2(self._epsilon, 0))) - z) / self._epsilon
+        wrtY = (self.get_position_probability_dx(pos.add(Vec2(0, self._epsilon))) - z) / self._epsilon
         return Vec2(wrtX, wrtY)
 
-    def get_position_probability_dy_gradient(self, pos, ignore_roots):
-        z = self.get_position_probability_dy(pos, ignore_roots)
-        wrtX = (self.get_position_probability_dy(pos.add(Vec2(self._epsilon, 0)), ignore_roots) - z)
-        wrtY = (self.get_position_probability_dy(pos.add(Vec2(0, self._epsilon)), ignore_roots) - z)
+    def get_position_probability_dy_gradient(self, pos):
+        z = self.get_position_probability_dy(pos)
+        wrtX = (self.get_position_probability_dy(pos.add(Vec2(self._epsilon, 0))) - z) / self._epsilon
+        wrtY = (self.get_position_probability_dy(pos.add(Vec2(0, self._epsilon))) - z) / self._epsilon
         return Vec2(wrtX, wrtY)
 
-    def get_rotation_probability_dx(self, rot, ignore_roots):
+    def get_rotation_probability_dx(self, rot):
         return ((self.get_rotation_probability(rot + self._epsilon)
             - self.get_rotation_probability(rot))
-            / self._epsilon
-            * self._calculate_ignore_root_factor_1d(rot, ignore_roots))
+            / self._epsilon)
 
-    def get_rotation_probability_dx2(self, rot, ignore_roots):
-        return (self.get_rotation_probability_dx(rot + self._epsilon, ignore_roots)
-            - self.get_rotation_probability_dx(rot, ignore_roots)) / self._epsilon
-
-    def _calculate_ignore_root_factor_2d(self, pos, ignore_roots):
-        return 1
-        ignore_root_factor = 1
-        epsilon_vec = Vec2(self._epsilon, self._epsilon)
-        for root in ignore_roots:
-            product = math.inf
-            negative_center = pos * -1
-            while True:
-                if not math.isfinite(product):
-                    diff = negative_center + root
-                    factor = 1 / (diff.dot(diff) + 1) - 1
-                    product = 1 / factor if factor else math.inf
-                    negative_center += epsilon_vec
-                else:
-                    ignore_root_factor *= product
-                    break
-        return ignore_root_factor
-
-    def _calculate_ignore_root_factor_1d(self, pos, ignore_roots):
-        return 1
-        ignore_root_factor = 1
-        for root in ignore_roots:
-            x = rot
-            while True:
-                if not math.isfinite(product):
-                    product = a / (x - b)
-                    x = x + self._epsilon
-                else:
-                    ignore_root_factor *= product
-                    break
-        return ignore_root_factor
+    def get_rotation_probability_dx2(self, rot):
+        return (self.get_rotation_probability_dx(rot + self._epsilon)
+            - self.get_rotation_probability_dx(rot)) / self._epsilon
 
 
 class LocalizationSource(ABC):
@@ -199,8 +164,10 @@ class RobotLocalizer(Layer):
 
 
 class NewtonLocalizer(RobotLocalizer):
-    MAX_NEWTON_STEPS = 40
-    MAX_NEWTON_ROOTS = 4
+    MAX_POS_NEWTON_STEPS = 40
+    MAX_POS_NEWTON_ROOTS = 4
+    MAX_ROT_NEWTON_STEPS = 40
+    MAX_ROT_NEWTON_ROOTS = 4
     NEWTON_DISTURBANCE_SIZE = 1
 
     def __init__(self, initial_transform):
@@ -215,23 +182,24 @@ class NewtonLocalizer(RobotLocalizer):
         if not self._cached_tfm:
             # Find roots of position derivative
             pos_roots = []
-            for i in range(self.MAX_NEWTON_ROOTS):
+            for i in range(self.MAX_POS_NEWTON_ROOTS):
                 xy = Vec2.zero()
                 xy_min_err = xy
                 min_err = math.inf
-                for j in range(self.MAX_NEWTON_STEPS + 1):
+                for j in range(self.MAX_POS_NEWTON_STEPS + 1):
                     err = sum((
-                        self._get_data(src).get_position_probability_dx(xy, pos_roots)
-                        + self._get_data(src).get_position_probability_dy(xy, pos_roots)
+                        abs(self._get_data(src).get_position_probability_dx(xy))
+                        + abs(self._get_data(src).get_position_probability_dy(xy))
                     ) for src in self._sources)
+                    print(err, xy)
                     if err < min_err:
                         xy_min_err = xy
                         min_err = err
-                    if j < self.MAX_NEWTON_STEPS:
+                    if j < self.MAX_POS_NEWTON_STEPS:
                         grad = sum(
                             ((
-                                self._get_data(src).get_position_probability_dx_gradient(xy, pos_roots)
-                                + self._get_data(src).get_position_probability_dy_gradient(xy, pos_roots)
+                                self._get_data(src).get_position_probability_dx_gradient(xy)
+                                + self._get_data(src).get_position_probability_dy_gradient(xy)
                             ) for src in self._sources),
                             start=Vec2.zero()
                         )
@@ -242,8 +210,9 @@ class NewtonLocalizer(RobotLocalizer):
                                 math.cos(nudge_angle) * self.NEWTON_DISTURBANCE_SIZE,
                                 math.sin(nudge_angle) * self.NEWTON_DISTURBANCE_SIZE
                             )
-                        xy += delta
+                        xy = delta + xy
                 pos_roots.append(xy_min_err)
+                print(xy_min_err)
             # Pick absolute maximum probability from roots
             pos = max(
                 ((root, sum(
@@ -254,21 +223,21 @@ class NewtonLocalizer(RobotLocalizer):
             )[0]
             # Find roots of rotation derivative
             rot_roots = []
-            for i in range(self.MAX_NEWTON_ROOTS):
+            for i in range(self.MAX_ROT_NEWTON_ROOTS):
                 x = 0
                 x_min_err = x
                 min_err = math.inf
-                for j in range(self.MAX_NEWTON_STEPS + 1):
+                for j in range(self.MAX_ROT_NEWTON_STEPS + 1):
                     err = sum(
-                        self._get_data(src).get_rotation_probability_dx(x, rot_roots)
+                        self._get_data(src).get_rotation_probability_dx(x)
                         for src in self._sources
                     )
                     if err < min_err:
                         x_min_err = x
                         min_err = err
-                    if j < self.MAX_NEWTON_STEPS:
+                    if j < self.MAX_ROT_NEWTON_STEPS:
                         slope = sum(
-                            self._get_data(src).get_rotation_probability_dx2(x, rot_roots)
+                            self._get_data(src).get_rotation_probability_dx2(x)
                             for src in self._sources
                         )
                         delta = -err / slope if slope else math.inf

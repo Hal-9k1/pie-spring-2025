@@ -85,7 +85,7 @@ class TestLayerGraphRelations(TestCase):
         self.assertEqual(self._g.get_sinks(), {self._b})
 
 
-class TestRobotController(TestCase):
+class TestRobotControllerBase(TestCase):
     def setUp(self):
         self._lg = LayerGraph()
 
@@ -93,14 +93,17 @@ class TestRobotController(TestCase):
         self._rc = RobotController()
         self._rc.setup(None, None, self._lg, LoggerProvider())
 
-    def _test_rc(self):
+    def _test_rc(self, updates=100, fail_on_incomplete=True):
         self._create_rc()
-        for _ in range(100):
+        for _ in range(updates):
             if self._rc.update():
                 break
         else:
-            self.fail('Program did not complete in 100 updates.')
+            if fail_on_incomplete:
+                self.fail('Program did not complete in update limit.')
 
+
+class TestRobotController(TestRobotControllerBase):
     def _check_collector(self, c, types):
         self.assertEqual(types, [type(t) for t in c.collect()])
 
