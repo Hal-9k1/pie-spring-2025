@@ -1,4 +1,3 @@
-from challenges import *
 import opmodes
 from mockrobot import MockRobot
 from mockrobot import MockGamepad
