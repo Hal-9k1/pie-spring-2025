@@ -106,6 +106,7 @@ class ButtonPusherMapping(AbstractFunctionLayer):
         self._is_high = True
         self._gp_down = False
         self._kb_down = False
+        self._logger = setup_info.get_logger('ButtonPusherMapping')
 
     def get_input_tasks(self):
         return {GamepadInputTask, KeyboardInputTask}
@@ -125,5 +126,6 @@ class ButtonPusherMapping(AbstractFunctionLayer):
         else:
             raise TypeError(f'Bad task type of {task}')
         if triggered:
+            self._logger.trace('Triggered')
             self._is_high = not self._is_high
         return DriveButtonPusherTask(triggered, self._is_high)
