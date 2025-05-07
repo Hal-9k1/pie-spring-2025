@@ -73,7 +73,10 @@ class Mat2:
         return self.mul(other)
 
     def __eq__(self, other):
-        return isinstance(other, Mat2) and all(a == b for a, b in zip(self._mat, other._mat))
+        return isinstance(other, Mat2) and self._mat == other._mat
+
+    def __hash__(self):
+        return hash(self._mat)
 
     def __repr__(self):
         return f'Mat2({", ".join(repr(e) for e in self._mat)})'
@@ -194,7 +197,10 @@ class Mat3:
         return self.mul(other)
 
     def __eq__(self, other):
-        return isinstance(other, Mat3) and all(a == b for a, b in zip(self._mat, other._mat))
+        return isinstance(other, Mat3) and self._mat == other._mat
+
+    def __hash__(self):
+        return hash(self._mat)
 
     def __repr__(self):
         return f'Mat3({", ".join(repr(e) for e in self._mat)})'
@@ -256,6 +262,9 @@ class Vec2:
     def __eq__(self, other):
         return isinstance(other, Vec2) and self._x == other._x and self._y == other._y
 
+    def __hash__(self):
+        return hash((self._x, self._y))
+
     def __repr__(self):
         return f'Vec2({repr(self._x)}, {repr(self._y)})'
 
@@ -294,7 +303,10 @@ class Vec3:
         return self.mul(other)
 
     def __eq__(self, other):
-        return isinstance(other, Vec3) and all(a == b for a, b in zip(self._vec, other._vec))
+        return isinstance(other, Vec3) and self._vec == other._vec
+
+    def __hash__(self):
+        return hash(self._vec)
 
     def __repr__(self):
         return f'Vec3({", ".join(repr(e) for e in self._vec)})'
