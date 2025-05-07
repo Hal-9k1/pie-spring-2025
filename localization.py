@@ -203,19 +203,20 @@ class NewtonLocalizer(RobotLocalizer):
                         )
                         if grad.len() > self.NEWTON_FLAT_THRESHOLD:
                             delta = grad * (-err / grad.dot(grad)) * self.NEWTON_STEP_SIZE
-                            print(f'grad {grad.len()}\t\terr {err} delta {delta}\t= xy {xy + delta}')
+                            print(f'grad {grad}\t\terr {err} delta {delta}\t= xy {xy + delta}')
                         else:
-                            print("nudge")
                             nxy = xy.mul(-1)
                             overlapping_roots = [
                                 root for root in pos_roots
-                                if root.add(nxy).len() > self.NEWTON_ROOT_EPSILON
+                                if root.add(nxy).len() < self.NEWTON_ROOT_EPSILON
                             ]
                             if not overlapping_roots:
                                 # Terminate this root path immediately
+                                print(f'found root {xy}, flat')
                                 break
+                            print(f'nudge from {xy} for grad {grad}')
                             for root in overlapping_roots:
-                                roots_hit[root] = roots_hit.getordefault(root, 0) + 1
+                                roots_hit[root] = roots_hit.get(root, 0) + 1
                             nudge_angle = random() * 2 * math.pi
                             size = sum(roots_hit[root] for root in overlapping_roots) * self.NEWTON_DISTURBANCE_SIZE
                             delta = Vec2(
@@ -223,6 +224,8 @@ class NewtonLocalizer(RobotLocalizer):
                                 math.sin(nudge_angle) * size
                             )
                         xy = delta + xy
+                else:
+                    print(f'found root {xy}, steps')
                 pos_roots.append(xy)
             # Pick absolute maximum probability from roots
             pos = max(
