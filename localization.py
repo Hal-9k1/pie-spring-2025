@@ -164,11 +164,11 @@ class RobotLocalizer(Layer):
 
 
 class NewtonLocalizer(RobotLocalizer):
-    MAX_POS_NEWTON_STEPS = 40
+    MAX_POS_NEWTON_STEPS = 800
     MAX_POS_NEWTON_ROOTS = 4
     MAX_ROT_NEWTON_STEPS = 80
     MAX_ROT_NEWTON_ROOTS = 4
-    NEWTON_STEP_SIZE = 1
+    NEWTON_STEP_SIZE = 2
     NEWTON_DISTURBANCE_SIZE = 1
     NEWTON_ROOT_EPSILON = 0.01
     NEWTON_FLAT_THRESHOLD = 0.001
@@ -183,42 +183,54 @@ class NewtonLocalizer(RobotLocalizer):
 
     def resolve_transform(self):
         if not self._cached_tfm:
-            # Find roots of position derivative
-            pos_roots = []
+            # Find position probability maxima
+            pos_maxima = []
             for i in range(self.MAX_POS_NEWTON_ROOTS):
                 xy = Vec2.zero()
-                roots_hit = {}
+                maxima_hit = {}
+                speed = 1
+                probability = sum(
+                    self._get_data(src).get_position_probability(xy)
+                    for src in self._sources
+                )
                 for j in range(self.MAX_POS_NEWTON_STEPS + 1):
-                    err = sum((
-                        abs(self._get_data(src).get_position_probability_dx(xy))
-                        + abs(self._get_data(src).get_position_probability_dy(xy))
-                    ) for src in self._sources)
                     if j < self.MAX_POS_NEWTON_STEPS:
                         grad = sum(
-                            ((
-                                self._get_data(src).get_position_probability_dx_gradient(xy)
-                                + self._get_data(src).get_position_probability_dy_gradient(xy)
-                            ) for src in self._sources),
+                            (
+                                Vec2(
+                                    self._get_data(src).get_position_probability_dx(xy),
+                                    self._get_data(src).get_position_probability_dy(xy)
+                                )
+                                for src in self._sources
+                            ),
                             start=Vec2.zero()
                         )
+                        old_probability = probability
                         if grad.len() > self.NEWTON_FLAT_THRESHOLD:
-                            delta = grad * (-err / grad.dot(grad)) * self.NEWTON_STEP_SIZE
-                            print(f'grad {grad}\t\terr {err} delta {delta}\t= xy {xy + delta}')
+                            delta = grad * speed * self.NEWTON_STEP_SIZE
+                            probability = sum(
+                                self._get_data(src).get_position_probability(xy + delta)
+                                for src in self._sources
+                            )
+                            if probability < old_probability:
+                                speed /= 2
+                                delta = Vec2.zero()
+                            print(f'grad {grad}\t\top {old_probability} p {probability} delta {delta}\t= xy {xy + delta}')
                         else:
                             nxy = xy.mul(-1)
-                            overlapping_roots = [
-                                root for root in pos_roots
-                                if root.add(nxy).len() < self.NEWTON_ROOT_EPSILON
+                            overlapping_maxima = [
+                                maximum for maximum in pos_maxima
+                                if maximum.add(nxy).len() < self.NEWTON_ROOT_EPSILON
                             ]
-                            if not overlapping_roots:
-                                # Terminate this root path immediately
-                                print(f'found root {xy}, flat')
+                            if not overlapping_maxima:
+                                # Terminate this maximum path immediately
+                                print(f'found maximum {xy}, flat')
                                 break
                             print(f'nudge from {xy} for grad {grad}')
-                            for root in overlapping_roots:
-                                roots_hit[root] = roots_hit.get(root, 0) + 1
+                            for maximum in overlapping_maxima:
+                                maxima_hit[maximum] = maxima_hit.get(maximum, 0) + 1
                             nudge_angle = random() * 2 * math.pi
-                            size = sum(roots_hit[root] for root in overlapping_roots) * self.NEWTON_DISTURBANCE_SIZE
+                            size = sum(maxima_hit[maximum] for maximum in overlapping_maxima) * self.NEWTON_DISTURBANCE_SIZE
                             delta = Vec2(
                                 math.cos(nudge_angle) * size,
                                 math.sin(nudge_angle) * size
@@ -226,13 +238,13 @@ class NewtonLocalizer(RobotLocalizer):
                         xy = delta + xy
                 else:
                     print(f'found root {xy}, steps')
-                pos_roots.append(xy)
-            # Pick absolute maximum probability from roots
+                pos_maxima.append(xy)
+            # Pick absolute maximum
             pos = max(
-                ((root, sum(
-                    self._get_data(src).get_position_probability(root)
+                ((maximum, sum(
+                    self._get_data(src).get_position_probability(maximum)
                     for src in self._sources
-                )) for root in pos_roots),
+                )) for maximum in pos_maxima),
                 key=lambda x: x[1]
             )[0]
             # Find roots of rotation derivative
