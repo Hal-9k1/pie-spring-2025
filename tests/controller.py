@@ -89,12 +89,9 @@ class TestRobotControllerBase(TestCase):
     def setUp(self):
         self._lg = LayerGraph()
 
-    def _create_rc(self):
+    def _test_rc(self, updates=100, fail_on_incomplete=True):
         self._rc = RobotController()
         self._rc.setup(None, None, self._lg, LoggerProvider())
-
-    def _test_rc(self, updates=100, fail_on_incomplete=True):
-        self._create_rc()
         for _ in range(updates):
             if self._rc.update():
                 break

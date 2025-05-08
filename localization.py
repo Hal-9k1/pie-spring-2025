@@ -164,15 +164,21 @@ class RobotLocalizer(Layer):
 
 
 class NewtonLocalizer(RobotLocalizer):
-    MAX_POS_NEWTON_STEPS = 80
-    MAX_POS_NEWTON_ROOTS = 4
-    MAX_ROT_NEWTON_STEPS = 80
-    MAX_ROT_NEWTON_ROOTS = 4
-    NEWTON_STEP_SIZE = 1
-    NEWTON_DISTURBANCE_SIZE = 1
-    NEWTON_ROOT_EPSILON = 0.01
-    NEWTON_FLAT_THRESHOLD = 0.001
-    NEWTON_SPEED_DAMPING_FACTOR = 0.5
+    POS_NEWTON_STEPS = 160
+    POS_NEWTON_ROOTS = 4
+    POS_NEWTON_STEP_SIZE = 10
+    POS_NEWTON_DISTURBANCE_SIZE = 10
+    POS_NEWTON_ROOT_EPSILON = 0.01
+    POS_NEWTON_FLAT_THRESHOLD = 0.001
+    POS_NEWTON_SPEED_DAMPING = 0.9
+
+    ROT_NEWTON_STEPS = 160
+    ROT_NEWTON_ROOTS = 4
+    ROT_NEWTON_STEP_SIZE = 1
+    ROT_NEWTON_DISTURBANCE_SIZE = 0.5
+    ROT_NEWTON_ROOT_EPSILON = 0.001
+    ROT_NEWTON_FLAT_THRESHOLD = 0.001
+    ROT_NEWTON_SPEED_DAMPING = 0.5
 
     def __init__(self, initial_transform):
         super().__init__(initial_transform)
@@ -186,7 +192,7 @@ class NewtonLocalizer(RobotLocalizer):
         if not self._cached_tfm:
             # Find position probability maxima
             pos_maxima = []
-            for i in range(self.MAX_POS_NEWTON_ROOTS):
+            for i in range(self.POS_NEWTON_ROOTS):
                 xy = Vec2.zero()
                 maxima_hit = {}
                 speed = 1
@@ -194,8 +200,8 @@ class NewtonLocalizer(RobotLocalizer):
                     self._get_data(src).get_position_probability(xy)
                     for src in self._sources
                 )
-                for j in range(self.MAX_POS_NEWTON_STEPS + 1):
-                    if j < self.MAX_POS_NEWTON_STEPS:
+                for j in range(self.POS_NEWTON_STEPS + 1):
+                    if j < self.POS_NEWTON_STEPS:
                         grad = sum(
                             (
                                 Vec2(
@@ -207,20 +213,20 @@ class NewtonLocalizer(RobotLocalizer):
                             start=Vec2.zero()
                         )
                         old_probability = probability
-                        if grad.len() > self.NEWTON_FLAT_THRESHOLD:
-                            delta = grad * speed * self.NEWTON_STEP_SIZE
+                        if grad.len() > self.POS_NEWTON_FLAT_THRESHOLD:
+                            delta = grad * speed * self.POS_NEWTON_STEP_SIZE
                             probability = sum(
                                 self._get_data(src).get_position_probability(xy + delta)
                                 for src in self._sources
                             )
                             if probability < old_probability:
-                                speed *= self.NEWTON_SPEED_DAMPING_FACTOR
+                                speed *= self.POS_NEWTON_SPEED_DAMPING
                                 delta = Vec2.zero()
                         else:
                             nxy = xy.mul(-1)
                             overlapping_maxima = [
                                 maximum for maximum in pos_maxima
-                                if maximum.add(nxy).len() < self.NEWTON_ROOT_EPSILON
+                                if maximum.add(nxy).len() < self.POS_NEWTON_ROOT_EPSILON
                             ]
                             if not overlapping_maxima:
                                 # Terminate this maximum path immediately
@@ -228,7 +234,7 @@ class NewtonLocalizer(RobotLocalizer):
                             for maximum in overlapping_maxima:
                                 maxima_hit[maximum] = maxima_hit.get(maximum, 0) + 1
                             nudge_angle = random() * 2 * math.pi
-                            size = sum(maxima_hit[maximum] for maximum in overlapping_maxima) * self.NEWTON_DISTURBANCE_SIZE
+                            size = sum(maxima_hit[maximum] for maximum in overlapping_maxima) * self.POS_NEWTON_DISTURBANCE_SIZE
                             delta = Vec2(
                                 math.cos(nudge_angle) * size,
                                 math.sin(nudge_angle) * size
@@ -245,7 +251,7 @@ class NewtonLocalizer(RobotLocalizer):
             )[0]
             # Find rotation probability maxima
             rot_maxima = []
-            for i in range(self.MAX_ROT_NEWTON_ROOTS):
+            for i in range(self.ROT_NEWTON_ROOTS):
                 x = 0
                 maxima_hit = {}
                 speed = 1
@@ -253,26 +259,26 @@ class NewtonLocalizer(RobotLocalizer):
                     self._get_data(src).get_rotation_probability(x)
                     for src in self._sources
                 )
-                for j in range(self.MAX_ROT_NEWTON_STEPS + 1):
-                    if j < self.MAX_ROT_NEWTON_STEPS:
+                for j in range(self.ROT_NEWTON_STEPS + 1):
+                    if j < self.ROT_NEWTON_STEPS:
                         slope = sum(
                             self._get_data(src).get_rotation_probability_dx(x)
                             for src in self._sources
                         )
                         old_probability = probability
-                        if slope > self.NEWTON_FLAT_THRESHOLD:
-                            delta = slope * speed * self.NEWTON_STEP_SIZE
+                        if slope > self.ROT_NEWTON_FLAT_THRESHOLD:
+                            delta = slope * speed * self.ROT_NEWTON_STEP_SIZE
                             probability = sum(
                                 self._get_data(src).get_rotation_probability(x)
                                 for src in self._sources
                             )
                             if probability < old_probability:
-                                speed *= self.NEWTON_SPEED_DAMPING_FACTOR
+                                speed *= self.ROT_NEWTON_SPEED_DAMPING
                                 delta = 0
                         else:
                             overlapping_maxima = [
                                 maximum for maximum in rot_maxima
-                                if abs(maximum - x) < self.NEWTON_ROOT_EPSILON
+                                if abs(maximum - x) < self.ROT_NEWTON_ROOT_EPSILON
                             ]
                             if not overlapping_maxima:
                                 break
@@ -282,7 +288,7 @@ class NewtonLocalizer(RobotLocalizer):
                                 sum(
                                     maxima_hit[maximum]
                                     for maximum in overlapping_maxima
-                                ) * self.NEWTON_DISTURBANCE_SIZE,
+                                ) * self.ROT_NEWTON_DISTURBANCE_SIZE,
                                 random() - 1 / 2
                             )
                         x += delta

@@ -1,35 +1,77 @@
-from tests.controller import TestRobotControllerBase
+from controller import LayerGraph
+from controller import RobotController
+from layer import Layer
 from localization import LocalizationSource
-from localization import SqFalloffLocalizationData
 from localization import NewtonLocalizer
-from matrix import Vec2
+from localization import SqFalloffLocalizationData
+from log import LoggerProvider
 from matrix import Mat2
 from matrix import Mat3
-from layer import Layer
-from unittest import TestCase
+from matrix import Vec2
+from multiprocessing import Pool
+from random import seed
 from task.sensory import LocalizationTask
-
+from tests.controller import TestRobotControllerBase
+from unittest import TestCase
+import math
 
 class TestNewtonLocalizer(TestRobotControllerBase):
-    def _test_rc(self, start_tfm, sources, solution):
+    def _test_rc(start_tfm, sources, lg=None):
+        lg = lg or LayerGraph()
         l10n = NewtonLocalizer(start_tfm)
         for src in sources:
             l10n.register_source(src)
         recorder = LocalizationRecorder()
-        self._lg.add_chain([l10n, recorder])
-        super()._test_rc(1, False)
-        resolved = recorder.task.get_robot_field_transform()
+        lg.add_chain([l10n, recorder])
+        rc = RobotController()
+        rc.setup(None, None, lg, LoggerProvider())
+        rc.update()
+        return recorder.task.get_robot_field_transform()
+
+    def _test_localize_one_source(tfm):
+        try:
+            seed(0)
+            return TestNewtonLocalizer._test_rc(Mat3.identity(), [ConstantLocalizationSource(tfm)])
+        except Exception as e:
+            return e
+
+    def _check_tfm(self, resolved, solution):
         delta_len = resolved.get_translation().add(solution.get_translation().mul(-1)).len()
         delta_theta = resolved.get_direction().angle_with(solution.get_direction())
-        self.assertLess(abs(delta_len), 0.02)
-        self.assertLess(abs(delta_theta), 0.02)
+        self.assertLess(abs(delta_len), 0.01)
+        self.assertLess(abs(delta_theta), 0.001)
 
-    def test_localize_one_source(self):
+    def test_localize_one_source_many(self):
+        resolution = 2
+        minimum = int(-5.5 / resolution)
+        maximum = int(5.5 / resolution)
+        runs = []
+        for x in (i * resolution for i in range(minimum, maximum)):
+            for y in (i * resolution for i in range(minimum, maximum)):
+                for t in (i * resolution * 2 * math.pi for i in range(0, resolution)):
+                    runs.append((x, y, t))
+        tfms = [Mat3.from_transform(
+            Mat2.from_angle(t),
+            Vec2(x, y)
+        ) for x, y, t in runs]
+        with Pool() as p:
+            results = p.map(TestNewtonLocalizer._test_localize_one_source, tfms)
+        for run, tfm, result in zip(runs, tfms, results):
+            with self.subTest(x=run[0], y=run[1], theta=run[2]):
+                if isinstance(tfm, Mat3):
+                    self._check_tfm(result, tfm)
+                else:
+                    raise tfm
+
+    def test_localize_one_source_single(self):
         tfm = Mat3.from_transform(
             Mat2.from_angle(2),
             Vec2(2, -2.047)
         )
-        self._test_rc(Mat3.identity(), [ConstantLocalizationSource(tfm)], tfm)
+        self._check_tfm(
+            TestNewtonLocalizer._test_rc(Mat3.identity(), [ConstantLocalizationSource(tfm)]),
+            tfm
+        )
 
 
 class ConstantLocalizationSource(LocalizationSource):
