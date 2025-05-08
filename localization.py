@@ -164,14 +164,15 @@ class RobotLocalizer(Layer):
 
 
 class NewtonLocalizer(RobotLocalizer):
-    MAX_POS_NEWTON_STEPS = 800
+    MAX_POS_NEWTON_STEPS = 80
     MAX_POS_NEWTON_ROOTS = 4
     MAX_ROT_NEWTON_STEPS = 80
     MAX_ROT_NEWTON_ROOTS = 4
-    NEWTON_STEP_SIZE = 2
+    NEWTON_STEP_SIZE = 1
     NEWTON_DISTURBANCE_SIZE = 1
     NEWTON_ROOT_EPSILON = 0.01
     NEWTON_FLAT_THRESHOLD = 0.001
+    NEWTON_SPEED_DAMPING_FACTOR = 0.5
 
     def __init__(self, initial_transform):
         super().__init__(initial_transform)
@@ -213,9 +214,8 @@ class NewtonLocalizer(RobotLocalizer):
                                 for src in self._sources
                             )
                             if probability < old_probability:
-                                speed /= 2
+                                speed *= self.NEWTON_SPEED_DAMPING_FACTOR
                                 delta = Vec2.zero()
-                            print(f'grad {grad}\t\top {old_probability} p {probability} delta {delta}\t= xy {xy + delta}')
                         else:
                             nxy = xy.mul(-1)
                             overlapping_maxima = [
@@ -224,9 +224,7 @@ class NewtonLocalizer(RobotLocalizer):
                             ]
                             if not overlapping_maxima:
                                 # Terminate this maximum path immediately
-                                print(f'found maximum {xy}, flat')
                                 break
-                            print(f'nudge from {xy} for grad {grad}')
                             for maximum in overlapping_maxima:
                                 maxima_hit[maximum] = maxima_hit.get(maximum, 0) + 1
                             nudge_angle = random() * 2 * math.pi
@@ -236,8 +234,6 @@ class NewtonLocalizer(RobotLocalizer):
                                 math.sin(nudge_angle) * size
                             )
                         xy = delta + xy
-                else:
-                    print(f'found root {xy}, steps')
                 pos_maxima.append(xy)
             # Pick absolute maximum
             pos = max(
@@ -247,36 +243,56 @@ class NewtonLocalizer(RobotLocalizer):
                 )) for maximum in pos_maxima),
                 key=lambda x: x[1]
             )[0]
-            # Find roots of rotation derivative
-            rot_roots = []
+            # Find rotation probability maxima
+            rot_maxima = []
             for i in range(self.MAX_ROT_NEWTON_ROOTS):
                 x = 0
-                x_min_err = x
-                min_err = math.inf
+                maxima_hit = {}
+                speed = 1
+                probability = sum(
+                    self._get_data(src).get_rotation_probability(x)
+                    for src in self._sources
+                )
                 for j in range(self.MAX_ROT_NEWTON_STEPS + 1):
-                    err = sum(
-                        self._get_data(src).get_rotation_probability_dx(x)
-                        for src in self._sources
-                    )
-                    if err < min_err:
-                        x_min_err = x
-                        min_err = err
                     if j < self.MAX_ROT_NEWTON_STEPS:
                         slope = sum(
-                            self._get_data(src).get_rotation_probability_dx2(x)
+                            self._get_data(src).get_rotation_probability_dx(x)
                             for src in self._sources
                         )
-                        delta = -err / slope * self.NEWTON_STEP_SIZE if slope else math.inf
-                        if not math.isfinite(delta):
-                            delta = math.copysign(self.NEWTON_DISTURBANCE_SIZE, random() - 1 / 2)
+                        old_probability = probability
+                        if slope > self.NEWTON_FLAT_THRESHOLD:
+                            delta = slope * speed * self.NEWTON_STEP_SIZE
+                            probability = sum(
+                                self._get_data(src).get_rotation_probability(x)
+                                for src in self._sources
+                            )
+                            if probability < old_probability:
+                                speed *= self.NEWTON_SPEED_DAMPING_FACTOR
+                                delta = 0
+                        else:
+                            overlapping_maxima = [
+                                maximum for maximum in rot_maxima
+                                if abs(maximum - x) < self.NEWTON_ROOT_EPSILON
+                            ]
+                            if not overlapping_maxima:
+                                break
+                            for maximum in overlapping_maxima:
+                                maxima_hit[maximum] = maxima_hit.get(maximum, 0) + 1
+                            delta = math.copysign(
+                                sum(
+                                    maxima_hit[maximum]
+                                    for maximum in overlapping_maxima
+                                ) * self.NEWTON_DISTURBANCE_SIZE,
+                                random() - 1 / 2
+                            )
                         x += delta
-                rot_roots.append(x_min_err)
-            # Pick absolute maximum probability from roots
+                rot_maxima.append(x)
+            # Pick absolute maximum probability
             rot = max(
-                ((root, sum(
-                    self._get_data(src).get_rotation_probability(root)
+                ((maximum, sum(
+                    self._get_data(src).get_rotation_probability(maximum)
                     for src in self._sources
-                )) for root in rot_roots),
+                )) for maximum in rot_maxima),
                 key=lambda x: x[1]
             )[0]
             # Combine most probable position and rotation into transform
