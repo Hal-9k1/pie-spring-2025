@@ -164,7 +164,7 @@ class RobotLocalizer(Layer):
 
 
 class NewtonLocalizer(RobotLocalizer):
-    POS_NEWTON_STEPS = 160
+    POS_NEWTON_STEPS = 320
     POS_NEWTON_ROOTS = 4
     POS_NEWTON_STEP_SIZE = 10
     POS_NEWTON_DISTURBANCE_SIZE = 10
@@ -174,7 +174,7 @@ class NewtonLocalizer(RobotLocalizer):
 
     ROT_NEWTON_STEPS = 160
     ROT_NEWTON_ROOTS = 4
-    ROT_NEWTON_STEP_SIZE = 1
+    ROT_NEWTON_STEP_SIZE = 0.5
     ROT_NEWTON_DISTURBANCE_SIZE = 0.5
     ROT_NEWTON_ROOT_EPSILON = 0.001
     ROT_NEWTON_FLAT_THRESHOLD = 0.001
@@ -266,7 +266,7 @@ class NewtonLocalizer(RobotLocalizer):
                             for src in self._sources
                         )
                         old_probability = probability
-                        if slope > self.ROT_NEWTON_FLAT_THRESHOLD:
+                        if abs(slope) > self.ROT_NEWTON_FLAT_THRESHOLD:
                             delta = slope * speed * self.ROT_NEWTON_STEP_SIZE
                             probability = sum(
                                 self._get_data(src).get_rotation_probability(x)
@@ -284,13 +284,11 @@ class NewtonLocalizer(RobotLocalizer):
                                 break
                             for maximum in overlapping_maxima:
                                 maxima_hit[maximum] = maxima_hit.get(maximum, 0) + 1
-                            delta = math.copysign(
-                                sum(
-                                    maxima_hit[maximum]
-                                    for maximum in overlapping_maxima
-                                ) * self.ROT_NEWTON_DISTURBANCE_SIZE,
-                                random() - 1 / 2
-                            )
+                            size = sum(
+                                maxima_hit[maximum]
+                                for maximum in overlapping_maxima
+                            ) * self.ROT_NEWTON_DISTURBANCE_SIZE
+                            delta = math.copysign(size, random() - 1 / 2)
                         x += delta
                 rot_maxima.append(x)
             # Pick absolute maximum probability

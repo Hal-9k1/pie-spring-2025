@@ -35,6 +35,26 @@ class TestNewtonLocalizer(TestRobotControllerBase):
         except Exception as e:
             return e
 
+    def _test_localize_eq_source(tfm):
+        try:
+            seed(0)
+            return TestNewtonLocalizer._test_rc(Mat3.identity(), [
+                ConstantLocalizationSource(
+                    Mat3.from_transform(Mat2.identity(), Vec2(1, 0)) * tfm
+                ),
+                ConstantLocalizationSource(
+                    Mat3.from_transform(Mat2.identity(), Vec2(0, 1)) * tfm
+                ),
+                ConstantLocalizationSource(
+                    Mat3.from_transform(Mat2.identity(), Vec2(-1, 0)) * tfm
+                ),
+                ConstantLocalizationSource(
+                    Mat3.from_transform(Mat2.identity(), Vec2(0, -1)) * tfm
+                ),
+            ])
+        except Exception as e:
+            return e
+
     def _check_tfm(self, resolved, solution):
         delta_len = resolved.get_translation().add(solution.get_translation().mul(-1)).len()
         delta_theta = resolved.get_direction().angle_with(solution.get_direction())
@@ -42,13 +62,20 @@ class TestNewtonLocalizer(TestRobotControllerBase):
         self.assertLess(abs(delta_theta), 0.001)
 
     def test_localize_one_source_many(self):
-        resolution = 2
-        minimum = int(-5.5 / resolution)
-        maximum = int(5.5 / resolution)
+        self._test_localize_many(TestNewtonLocalizer._test_localize_one_source)
+
+    def test_localize_eq_source(self):
+        self._test_localize_many(TestNewtonLocalizer._test_localize_eq_source)
+
+    def _test_localize_many(self, f):
+        resolution = 8
+        minimum = -5.5
+        maximum = 5.5
+        segment = (maximum - minimum) / resolution
         runs = []
-        for x in (i * resolution for i in range(minimum, maximum)):
-            for y in (i * resolution for i in range(minimum, maximum)):
-                for t in (i * resolution * 2 * math.pi for i in range(0, resolution)):
+        for x in (minimum + segment * i for i in range(resolution)):
+            for y in (minimum + segment * i for i in range(resolution)):
+                for t in (i * 2 * math.pi / resolution for i in range(resolution)):
                     runs.append((x, y, t))
         tfms = [Mat3.from_transform(
             Mat2.from_angle(t),
