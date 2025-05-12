@@ -248,10 +248,7 @@ class Vec2:
         return self.mul(self.dot(projectee) / self.dot(self))
 
     def get_perpendicular(self):
-        p = Vec2(1, -self._x / self._y)
-        if not p.is_finite():
-            p = Vec2(0, 1)
-        return p
+        return Vec2(1, -self._x / self._y) if self._y else Vec2(1, 0)
 
     def __add__(self, other):
         return self.add(other)
