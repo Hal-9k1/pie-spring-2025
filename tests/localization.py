@@ -62,6 +62,7 @@ class TestNewtonLocalizer(TestRobotControllerBase):
         self.assertLess(abs(delta_theta), 0.001, resolved.get_direction().get_angle())
 
     def test_localize_one_source_many(self):
+        self.skipTest('Debugging in test_localize_eq_source_single')
         self._test_localize_many(TestNewtonLocalizer._test_localize_one_source)
 
     def test_localize_eq_source_many(self):

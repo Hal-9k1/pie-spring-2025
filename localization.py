@@ -9,6 +9,14 @@ from task.sensory import LocalizationTask
 import math
 
 
+def _clean_print(s):
+    import re
+    p = 6
+    def r(m):
+        return str(round(float(m.group(0)) * 10**p) / 10**p).ljust(p + 2, '0') if '.' in m.group(0) else m.group(0)
+    print(re.sub('(?<![a-zA-Z])[\d\.]+', r, s), end=' ')
+
+
 class LocalizationData(ABC):
     @abstractmethod
     def get_position_probability(self, pos):
@@ -171,6 +179,7 @@ class NewtonLocalizer(RobotLocalizer):
     POS_NEWTON_ROOT_EPSILON = 0.01
     POS_NEWTON_FLAT_THRESHOLD = 0.001
     POS_NEWTON_SPEED_DAMPING = 0.9
+    POS_NEWTON_MIN_SPEED = 0.1
 
     ROT_NEWTON_STEPS = 160
     ROT_NEWTON_ROOTS = 4
@@ -183,6 +192,7 @@ class NewtonLocalizer(RobotLocalizer):
     def __init__(self, initial_transform):
         super().__init__(initial_transform)
         self.invalidate_cache()
+        print('hello world')
 
     def invalidate_cache(self):
         self._cached_tfm = None
@@ -214,6 +224,7 @@ class NewtonLocalizer(RobotLocalizer):
                         )
                         old_probability = probability
                         if grad.len() > self.POS_NEWTON_FLAT_THRESHOLD:
+                            _clean_print(f'grad {grad} speed {speed}')
                             delta = grad * speed * self.POS_NEWTON_STEP_SIZE
                             probability = sum(
                                 self._get_data(src).get_position_probability(xy + delta)
@@ -221,7 +232,11 @@ class NewtonLocalizer(RobotLocalizer):
                             )
                             if probability < old_probability:
                                 speed *= self.POS_NEWTON_SPEED_DAMPING
+                                if speed < self.POS_NEWTON_MIN_SPEED:
+                                    _clean_print('terminate slowness')
+                                    break
                                 delta = Vec2.zero()
+                                _clean_print(f'slow {speed < self.POS_NEWTON_MIN_SPEED}')
                         else:
                             nxy = xy.mul(-1)
                             overlapping_maxima = [
@@ -230,6 +245,7 @@ class NewtonLocalizer(RobotLocalizer):
                             ]
                             if not overlapping_maxima:
                                 # Terminate this maximum path immediately
+                                _clean_print('terminate flatness')
                                 break
                             for maximum in overlapping_maxima:
                                 maxima_hit[maximum] = maxima_hit.get(maximum, 0) + 1
@@ -239,7 +255,11 @@ class NewtonLocalizer(RobotLocalizer):
                                 math.cos(nudge_angle) * size,
                                 math.sin(nudge_angle) * size
                             )
+                            _clean_print(f'nudge {size}')
+                        _clean_print(f'{xy} -> {delta + xy} \n')
                         xy = delta + xy
+                else:
+                    _clean_print('terminate iters')
                 pos_maxima.append(xy)
             # Pick absolute maximum
             pos = max(
