@@ -171,20 +171,43 @@ class RobotLocalizer(Layer):
         raise NotImplementedError
 
 
+class NewtonHistory:
+    def __init__(self, size, weight):
+        self._size = size
+        self._weight = weight
+        self._hist = [None] * size
+        self._idx = 0
+
+    def add(self, value):
+        self._hist[self._idx] = value
+        self._idx = (self._idx + 1) % self._size
+
+    def accumulate(self):
+        return sum(
+            (
+                v if v != None else self._hist[0]
+                for v in self._hist
+            ), start=Vec2.zero()
+        ) * self._weight
+
+
 class NewtonLocalizer(RobotLocalizer):
-    POS_NEWTON_STEPS = 1280
+    POS_NEWTON_STEPS = 640
     POS_NEWTON_ROOTS = 4
-    POS_NEWTON_STEP_SIZE = 1
+    POS_NEWTON_INITIAL_SPEED = 4
     POS_NEWTON_DISTURBANCE_SIZE = 4
     POS_NEWTON_ROOT_EPSILON = 0.01
-    POS_NEWTON_FLAT_THRESHOLD = 0.001
+    POS_NEWTON_FLAT_THRESHOLD = 10**-6
     POS_NEWTON_SPEED_DAMPING = 0.9
-    POS_NEWTON_MIN_SPEED = 0.1
-    POS_NEWTON_MIN_IMPROVEMENT = 0.00001
+    POS_NEWTON_MIN_SPEED = 10**-1
+    POS_NEWTON_MIN_IMPROVEMENT = 10**-4
+    POS_NEWTON_HIST_LENGTH = 64
+    POS_NEWTON_HIST_WEIGHT = 1 / 32
+    POS_NEWTON_GRAD_WEIGHT = 2
 
     ROT_NEWTON_STEPS = 160
     ROT_NEWTON_ROOTS = 4
-    ROT_NEWTON_STEP_SIZE = 0.5
+    ROT_NEWTON_INITIAL_SPEED = 0.5
     ROT_NEWTON_DISTURBANCE_SIZE = 0.5
     ROT_NEWTON_ROOT_EPSILON = 0.001
     ROT_NEWTON_FLAT_THRESHOLD = 0.001
@@ -193,7 +216,7 @@ class NewtonLocalizer(RobotLocalizer):
     def __init__(self, initial_transform):
         super().__init__(initial_transform)
         self.invalidate_cache()
-        print('hello world')
+        #print('hello world')
 
     def invalidate_cache(self):
         self._cached_tfm = None
@@ -206,7 +229,8 @@ class NewtonLocalizer(RobotLocalizer):
             for i in range(self.POS_NEWTON_ROOTS):
                 xy = Vec2.zero()
                 maxima_hit = {}
-                speed = 1
+                speed = self.POS_NEWTON_INITIAL_SPEED
+                hist = NewtonHistory(self.POS_NEWTON_HIST_LENGTH, self.POS_NEWTON_HIST_WEIGHT)
                 probability = sum(
                     self._get_data(src).get_position_probability(xy)
                     for src in self._sources
@@ -225,8 +249,10 @@ class NewtonLocalizer(RobotLocalizer):
                         )
                         old_probability = probability
                         if grad.len() > self.POS_NEWTON_FLAT_THRESHOLD:
-                            _clean_print(f'diff {grad * speed * self.POS_NEWTON_STEP_SIZE} speed {speed}')
-                            delta = grad * speed * self.POS_NEWTON_STEP_SIZE
+                            hist.add(grad)
+                            #delta = (grad * self.POS_NEWTON_GRAD_WEIGHT + hist.accumulate()) * speed
+                            delta = grad.unit() * max(0.1, grad.len()) * speed
+                            _clean_print(f'grad {grad} delta {delta} speed {speed}')
                             probability = sum(
                                 self._get_data(src).get_position_probability(xy + delta)
                                 for src in self._sources
@@ -238,6 +264,8 @@ class NewtonLocalizer(RobotLocalizer):
                                     break
                                 delta = Vec2.zero()
                                 _clean_print('slow')
+                            else:
+                                speed = self.POS_NEWTON_INITIAL_SPEED
                             _clean_print(f'{probability - old_probability}')
                         else:
                             nxy = xy.mul(-1)
@@ -273,13 +301,12 @@ class NewtonLocalizer(RobotLocalizer):
                 )) for maximum in pos_maxima),
                 key=lambda x: x[1]
             )[0]
-            _clean_print(f'absolute answer: {pos}\n\n\n')
             # Find rotation probability maxima
             rot_maxima = []
             for i in range(self.ROT_NEWTON_ROOTS):
                 x = 0
                 maxima_hit = {}
-                speed = 1
+                speed = self.ROT_NEWTON_INITIAL_SPEED
                 probability = sum(
                     self._get_data(src).get_rotation_probability(x)
                     for src in self._sources
@@ -292,7 +319,7 @@ class NewtonLocalizer(RobotLocalizer):
                         )
                         old_probability = probability
                         if abs(slope) > self.ROT_NEWTON_FLAT_THRESHOLD:
-                            delta = slope * speed * self.ROT_NEWTON_STEP_SIZE
+                            delta = slope * speed * self.ROT_NEWTON_INITIAL_SPEED
                             probability = sum(
                                 self._get_data(src).get_rotation_probability(x)
                                 for src in self._sources
@@ -329,7 +356,6 @@ class NewtonLocalizer(RobotLocalizer):
                 Mat2.from_angle(rot),
                 pos
             )
-            _clean_print(f'Final pos: {self._cached_tfm.get_translation()}\n')
         return self._cached_tfm
 
     def _get_data(self, source):

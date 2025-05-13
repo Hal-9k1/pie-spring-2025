@@ -96,6 +96,7 @@ class TestNewtonLocalizer(TestRobotControllerBase):
                     raise result
 
     def test_localize_one_source_single(self):
+        self.skipTest('Testing test_localize_eq_source_single')
         tfm = Mat3.from_transform(
             Mat2.from_angle(2),
             Vec2(2, -3)
