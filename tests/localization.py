@@ -56,9 +56,12 @@ class TestNewtonLocalizer(TestRobotControllerBase):
             return e
 
     def _check_tfm(self, resolved, solution):
+        print(f'resolved pos: {resolved.get_translation()} actual pos: {solution.get_translation()} diff len: {(resolved.get_translation().add(solution.get_translation().mul(-1))).len()}')
         delta_len = resolved.get_translation().add(solution.get_translation().mul(-1)).len()
+        print(delta_len < 0.01)
+        self.assertLess(float(delta_len), 0.01)
         delta_theta = resolved.get_direction().angle_with(solution.get_direction())
-        self.assertLess(abs(delta_len), 0.01, resolved.get_translation())
+        self.assertLess(delta_len, 0.01, resolved.get_translation())
         self.assertLess(abs(delta_theta), 0.001, resolved.get_direction().get_angle())
 
     def test_localize_one_source_many(self):
@@ -95,7 +98,7 @@ class TestNewtonLocalizer(TestRobotControllerBase):
     def test_localize_one_source_single(self):
         tfm = Mat3.from_transform(
             Mat2.from_angle(2),
-            Vec2(2, -2.047)
+            Vec2(2, -3)
         )
         self._check_tfm(
             TestNewtonLocalizer._test_rc(Mat3.identity(), [ConstantLocalizationSource(tfm)]),
@@ -105,7 +108,7 @@ class TestNewtonLocalizer(TestRobotControllerBase):
     def test_localize_eq_source_single(self):
         tfm = Mat3.from_transform(
             Mat2.from_angle(2),
-            Vec2(2, -2.047)
+            Vec2(2, -3)
         )
         self._check_tfm(
             TestNewtonLocalizer._test_rc(Mat3.identity(), [

@@ -172,7 +172,7 @@ class RobotLocalizer(Layer):
 
 
 class NewtonLocalizer(RobotLocalizer):
-    POS_NEWTON_STEPS = 640
+    POS_NEWTON_STEPS = 1280
     POS_NEWTON_ROOTS = 4
     POS_NEWTON_STEP_SIZE = 1
     POS_NEWTON_DISTURBANCE_SIZE = 4
@@ -180,6 +180,7 @@ class NewtonLocalizer(RobotLocalizer):
     POS_NEWTON_FLAT_THRESHOLD = 0.001
     POS_NEWTON_SPEED_DAMPING = 0.9
     POS_NEWTON_MIN_SPEED = 0.1
+    POS_NEWTON_MIN_IMPROVEMENT = 0.00001
 
     ROT_NEWTON_STEPS = 160
     ROT_NEWTON_ROOTS = 4
@@ -224,19 +225,20 @@ class NewtonLocalizer(RobotLocalizer):
                         )
                         old_probability = probability
                         if grad.len() > self.POS_NEWTON_FLAT_THRESHOLD:
-                            _clean_print(f'grad {grad} speed {speed}')
+                            _clean_print(f'diff {grad * speed * self.POS_NEWTON_STEP_SIZE} speed {speed}')
                             delta = grad * speed * self.POS_NEWTON_STEP_SIZE
                             probability = sum(
                                 self._get_data(src).get_position_probability(xy + delta)
                                 for src in self._sources
                             )
-                            if probability < old_probability:
+                            if probability - old_probability < self.POS_NEWTON_MIN_IMPROVEMENT:
                                 speed *= self.POS_NEWTON_SPEED_DAMPING
                                 if speed < self.POS_NEWTON_MIN_SPEED:
-                                    _clean_print('terminate slowness')
+                                    _clean_print('terminate slowness\n')
                                     break
                                 delta = Vec2.zero()
-                                _clean_print(f'slow {speed < self.POS_NEWTON_MIN_SPEED}')
+                                _clean_print('slow')
+                            _clean_print(f'{probability - old_probability}')
                         else:
                             nxy = xy.mul(-1)
                             overlapping_maxima = [
@@ -245,7 +247,7 @@ class NewtonLocalizer(RobotLocalizer):
                             ]
                             if not overlapping_maxima:
                                 # Terminate this maximum path immediately
-                                _clean_print('terminate flatness')
+                                _clean_print('terminate flatness\n')
                                 break
                             for maximum in overlapping_maxima:
                                 maxima_hit[maximum] = maxima_hit.get(maximum, 0) + 1
@@ -259,9 +261,11 @@ class NewtonLocalizer(RobotLocalizer):
                         _clean_print(f'{xy} -> {delta + xy} \n')
                         xy = delta + xy
                 else:
-                    _clean_print('terminate iters')
+                    _clean_print('terminate iters\n')
                 pos_maxima.append(xy)
             # Pick absolute maximum
+            for m in pos_maxima:
+                _clean_print(f'{m}: {sum(self._get_data(src).get_position_probability(m) for src in self._sources)}\n')
             pos = max(
                 ((maximum, sum(
                     self._get_data(src).get_position_probability(maximum)
@@ -269,6 +273,7 @@ class NewtonLocalizer(RobotLocalizer):
                 )) for maximum in pos_maxima),
                 key=lambda x: x[1]
             )[0]
+            _clean_print(f'absolute answer: {pos}\n\n\n')
             # Find rotation probability maxima
             rot_maxima = []
             for i in range(self.ROT_NEWTON_ROOTS):
@@ -324,6 +329,7 @@ class NewtonLocalizer(RobotLocalizer):
                 Mat2.from_angle(rot),
                 pos
             )
+            _clean_print(f'Final pos: {self._cached_tfm.get_translation()}\n')
         return self._cached_tfm
 
     def _get_data(self, source):
