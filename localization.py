@@ -368,7 +368,7 @@ class NewtonLocalizer(RobotLocalizer):
         return self._data_cache[source]
 
 
-class PersistenceLocalizationSource(Layer, LocalizationSource):
+class AntiTeleportationLocalizationSource(Layer, LocalizationSource):
     FIN_DIFF_EPSILON = 0.0001
     POSITION_PRECISION = 1
     ROTATION_PRECISION = 1

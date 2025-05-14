@@ -161,8 +161,8 @@ class EscapeTestAutonomousOpmode(AbstractOpmode):
             Mat2.from_angle(0),
             Vec2(1.087, 0.356)
         ))
-        persistence_loc_src = localization.PersistenceLocalizationSource()
-        localizer.register_source(persistence_loc_src)
+        anti_tp_loc_src = localization.AntiTeleportationLocalizationSource()
+        localizer.register_source(anti_tp_loc_src)
         localizer.register_source(localization.EncoderLocalizationSource(drive))
         lg.add_chain([
             layer.WinLayer(),
@@ -171,7 +171,7 @@ class EscapeTestAutonomousOpmode(AbstractOpmode):
             drive,
         ])
         lg.add_connection(localizer, pathfinder)
-        lg.add_connection(localizer, persistence_loc_src)
+        lg.add_connection(localizer, anti_tp_loc_src)
         return lg
 
     def get_robot_spec(self):
