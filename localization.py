@@ -99,7 +99,7 @@ class LocalizationSource(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def collect_data() -> LocalizationData:
+    def collect_data(self) -> LocalizationData:
         raise NotImplementedError
 
 
@@ -368,7 +368,7 @@ class NewtonLocalizer(RobotLocalizer):
         return self._data_cache[source]
 
 
-class AntiTeleportationLocalizationSource(Layer, LocalizationSource):
+class PersistenceLocalizationSource(Layer, LocalizationSource):
     FIN_DIFF_EPSILON = 0.0001
     POSITION_PRECISION = 1
     ROTATION_PRECISION = 1
@@ -408,27 +408,56 @@ class AntiTeleportationLocalizationSource(Layer, LocalizationSource):
         return self._data
 
 
-class StaticObstacleLocalizationSource(Layer, LocalizationSource):
-    def __init__(self):
-        raise NotImplementedError
+class AbstractStaticObstacleLocalizationSource(Layer, LocalizationSource):
+
+    def __init__(self, detection_lifetime):
+        self._detections = []
+        self._new_tasks = []
+        self._lifetime
 
     def get_input_tasks(self):
-        return {LocalizationTask}
+        return {SensorTurretTask}
 
     def get_output_tasks(self):
         return set()
 
     def process(self, ctx):
-        raise NotImplementedError
+        for t in self._new_tasks:
+            ctx.complete_task(t)
+        self._new_tasks.clear()
+        ctx.request_task()
+        while self._detections:
+            head = self._detections[0]
+            if time.time() - head[0] > self._lifetime:
+                del self._detections[0]
+            else:
+                break
 
     def accept_task(self, task):
-        raise NotImplementedError
+        self._detections.append((time.time(), task))
+        self._new_tasks.append(task)
 
     def has_data(self):
         return True
 
     def collect_data(self):
+        dets = [d[1] for d in self._detections]
+        self._localize_from_detections(dets)
+
+    @abstractmethod
+    def _localize_from_detections(self, dets: list[LocalizationTask]) -> LocalizationData:
         raise NotImplementedError
+
+
+class TemplateMatchingLocalizationSource(AbstractStaticObstacleLocalizationSource):
+    DETECTION_LIFETIME = 1
+    RESOLUTION
+
+    def __init__(self):
+        super().__init__(self.DETECTION_LIFETIME)
+
+    def _localize_from_detections(self, dets):
+        pass
 
 
 class EncoderLocalizationSource(LocalizationSource):

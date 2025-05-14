@@ -7,3 +7,15 @@ class LocalizationTask(Task):
 
     def get_robot_field_transform(self):
         return self._transform
+
+
+class SensorTurretTask(Task):
+    def __init__(self, angle, distance):
+        self._angle = angle
+        self._distance = distance
+
+    def get_angle(self):
+        return self._angle
+
+    def get_distance(self):
+        return self._distance

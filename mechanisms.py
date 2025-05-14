@@ -151,3 +151,30 @@ class Hand:
                 max_idx = mid_idx - 1
             if min_idx == max_idx:
                 return self._get_hist_width(hist_idx)
+
+
+class ServoTurret:
+    FULL_RANGE_ANGLE = math.pi
+    FULL_RANGE = 2
+
+    def __init__(self, servo, full_range_time, safe_range):
+        self._servo = servo
+        self._range = safe_range
+        self._srt = (self._range[1] - self._range[0]) / self.FULL_RANGE * full_range_time
+        self._last_moved = 0
+        self._state = False
+
+    def init(self):
+        self._servo.set_position(self._range[0])
+
+    def move(self):
+        now = time.time()
+        if now - self._last_moved > self._frt:
+            self._last_moved = now
+            self._state = not self._state
+            self._servo.set_position(self._range[int(self._state)])
+
+    def get_angle(self):
+        frac = min(time.time() - self._last_moved, self._srt) / self._srt
+        delta = self._range[int(self._state)] - self._range[int(not self._state)]
+        return delta * frac * self.FULL_RANGE_ANGLE / self.FULL_RANGE
