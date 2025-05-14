@@ -13,8 +13,8 @@ def _clean_print(s):
     import re
     p = 6
     def r(m):
-        return str(round(float(m.group(0)) * 10**p) / 10**p).ljust(p + 2, '0') if '.' in m.group(0) else m.group(0)
-    print(re.sub('(?<![a-zA-Z])[\d\.]+', r, s), end=' ')
+        return '{0:+.5e}'.format(float(m.group(0)))
+    print(re.sub('(?<![a-zA-Z])[\-\+]?\d+(?:\.\d+)?(?:e[\+\-]\d+)?', r, s), end=' ')
 
 
 class LocalizationData(ABC):
@@ -193,17 +193,17 @@ class NewtonHistory:
 
 class NewtonLocalizer(RobotLocalizer):
     POS_NEWTON_STEPS = 640
-    POS_NEWTON_ROOTS = 4
+    POS_NEWTON_ROOTS = 8
     POS_NEWTON_INITIAL_SPEED = 4
     POS_NEWTON_DISTURBANCE_SIZE = 4
     POS_NEWTON_ROOT_EPSILON = 0.01
-    POS_NEWTON_FLAT_THRESHOLD = 10**-6
+    POS_NEWTON_FLAT_THRESHOLD = 10**-9
     POS_NEWTON_SPEED_DAMPING = 0.9
     POS_NEWTON_MIN_SPEED = 10**-1
-    POS_NEWTON_MIN_IMPROVEMENT = 10**-4
+    POS_NEWTON_MIN_IMPROVEMENT = 10**-9
     POS_NEWTON_HIST_LENGTH = 64
-    POS_NEWTON_HIST_WEIGHT = 1 / 32
-    POS_NEWTON_GRAD_WEIGHT = 2
+    POS_NEWTON_HIST_WEIGHT = 0
+    POS_NEWTON_MIN_GRAD_LEN = 10**-2
 
     ROT_NEWTON_STEPS = 160
     ROT_NEWTON_ROOTS = 4
@@ -236,7 +236,23 @@ class NewtonLocalizer(RobotLocalizer):
                     for src in self._sources
                 )
                 for j in range(self.POS_NEWTON_STEPS + 1):
-                    if j < self.POS_NEWTON_STEPS:
+                    nxy = xy.mul(-1)
+                    overlapping_maxima = [
+                        maximum for maximum in pos_maxima
+                        if maximum.add(nxy).len() < self.POS_NEWTON_ROOT_EPSILON
+                    ]
+                    for maximum in overlapping_maxima:
+                        maxima_hit[maximum] = maxima_hit.get(maximum, 0) + 1
+                    nudge_angle = random() * 2 * math.pi
+                    size = sum(maxima_hit[maximum] for maximum in overlapping_maxima) * self.POS_NEWTON_DISTURBANCE_SIZE
+                    if size:
+                        delta = Vec2(
+                            math.cos(nudge_angle) * size,
+                            math.sin(nudge_angle) * size
+                        )
+                        probability = 0
+                        _clean_print(f'nudge {size}')
+                    else:
                         grad = sum(
                             (
                                 Vec2(
@@ -250,9 +266,11 @@ class NewtonLocalizer(RobotLocalizer):
                         old_probability = probability
                         if grad.len() > self.POS_NEWTON_FLAT_THRESHOLD:
                             hist.add(grad)
-                            #delta = (grad * self.POS_NEWTON_GRAD_WEIGHT + hist.accumulate()) * speed
-                            delta = grad.unit() * max(0.1, grad.len()) * speed
-                            _clean_print(f'grad {grad} delta {delta} speed {speed}')
+                            delta = (
+                                grad.unit() * max(self.POS_NEWTON_MIN_GRAD_LEN, grad.len())
+                                + hist.accumulate()
+                            ) * speed
+                            _clean_print(f'grad {grad}[{grad.len()}] delta {delta} speed {speed}')
                             probability = sum(
                                 self._get_data(src).get_position_probability(xy + delta)
                                 for src in self._sources
@@ -266,28 +284,14 @@ class NewtonLocalizer(RobotLocalizer):
                                 _clean_print('slow')
                             else:
                                 speed = self.POS_NEWTON_INITIAL_SPEED
+                                _clean_print('    ')
                             _clean_print(f'{probability - old_probability}')
                         else:
-                            nxy = xy.mul(-1)
-                            overlapping_maxima = [
-                                maximum for maximum in pos_maxima
-                                if maximum.add(nxy).len() < self.POS_NEWTON_ROOT_EPSILON
-                            ]
-                            if not overlapping_maxima:
-                                # Terminate this maximum path immediately
-                                _clean_print('terminate flatness\n')
-                                break
-                            for maximum in overlapping_maxima:
-                                maxima_hit[maximum] = maxima_hit.get(maximum, 0) + 1
-                            nudge_angle = random() * 2 * math.pi
-                            size = sum(maxima_hit[maximum] for maximum in overlapping_maxima) * self.POS_NEWTON_DISTURBANCE_SIZE
-                            delta = Vec2(
-                                math.cos(nudge_angle) * size,
-                                math.sin(nudge_angle) * size
-                            )
-                            _clean_print(f'nudge {size}')
-                        _clean_print(f'{xy} -> {delta + xy} \n')
-                        xy = delta + xy
+                            # Terminate this maximum path immediately
+                            _clean_print('terminate flatness\n')
+                            break
+                    _clean_print(f'{xy} -> {delta + xy} \n')
+                    xy = delta + xy
                 else:
                     _clean_print('terminate iters\n')
                 pos_maxima.append(xy)
