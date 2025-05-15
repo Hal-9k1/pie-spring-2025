@@ -2,7 +2,7 @@ MAKEFLAGS += --no-builtin-rules
 
 eq = $(and $(findstring $(1),$(2)),$(findstring $(2),$(1)))
 
-python := /bin/python
+python := python
 build_module := mainbuild
 build_name := $(build_module).py
 

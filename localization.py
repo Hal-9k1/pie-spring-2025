@@ -1,12 +1,15 @@
 from abc import ABC
 from abc import abstractmethod
+from array import array
 from layer import Layer
 from matrix import Mat2
 from matrix import Mat3
 from matrix import Vec2
 from random import random
 from task.sensory import LocalizationTask
+from task.sensory import SensorTurretTask
 import math
+import time
 
 
 def _clean_print(s):
@@ -409,11 +412,10 @@ class PersistenceLocalizationSource(Layer, LocalizationSource):
 
 
 class AbstractStaticObstacleLocalizationSource(Layer, LocalizationSource):
-
     def __init__(self, detection_lifetime):
         self._detections = []
         self._new_tasks = []
-        self._lifetime
+        self._lifetime = detection_lifetime
 
     def get_input_tasks(self):
         return {SensorTurretTask}
@@ -451,10 +453,13 @@ class AbstractStaticObstacleLocalizationSource(Layer, LocalizationSource):
 
 class TemplateMatchingLocalizationSource(AbstractStaticObstacleLocalizationSource):
     DETECTION_LIFETIME = 1
-    RESOLUTION
+    PX_PER_M = 100
 
-    def __init__(self):
+    def __init__(self, field):
         super().__init__(self.DETECTION_LIFETIME)
+        size_m = field.get_size()
+        len_px = size_m.get_x() * size_m.get_y() * self.PX_PER_M**2
+        field_img = array('B', [0] * len_px)
 
     def _localize_from_detections(self, dets):
         pass

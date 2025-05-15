@@ -21,7 +21,7 @@ import time
 
 class AbstractOpmode(ABC):
     @abstractmethod
-    def get_layers(self, gamepad, keyboard):
+    def get_layers(self, field, gamepad, keyboard):
         pass
 
     def post_setup(self):
@@ -37,7 +37,7 @@ class AbstractOpmode(ABC):
     def get_robot_spec(self):
         pass
 
-    def setup(self, logger_provider, robot, hw_conf, gamepad, keyboard):
+    def setup(self, logger_provider, robot, hw_conf, field, gamepad, keyboard):
         self._controller = RobotController()
 
         lp = logger_provider.clone()
@@ -49,7 +49,7 @@ class AbstractOpmode(ABC):
         self._controller.setup(
             robot,
             hw_conf,
-            self.get_layers(gamepad, keyboard),
+            self.get_layers(field, gamepad, keyboard),
             lp
         )
 
@@ -67,7 +67,7 @@ class AbstractOpmode(ABC):
 
 
 class TwoWheelDriveTeleopOpmode(AbstractOpmode):
-    def get_layers(self, gamepad, keyboard):
+    def get_layers(self, field, gamepad, keyboard):
         lg = LayerGraph()
         zelda = layer.mapping.ZeldaDriveMapping()
         lg.add_chain([
@@ -85,7 +85,7 @@ class TwoWheelDriveTeleopOpmode(AbstractOpmode):
 
 
 class TWDPeripheralsTeleopOpmode(AbstractOpmode):
-    def get_layers(self, gamepad, keyboard):
+    def get_layers(self, field, gamepad, keyboard):
         lg = LayerGraph()
         zelda = layer.mapping.ZeldaDriveMapping()
         belt_map = layer.mapping.DpadBeltMapping(False)
@@ -117,7 +117,7 @@ class TWDPeripheralsTeleopOpmode(AbstractOpmode):
 
 
 class SampleAutonomousOpmode(AbstractOpmode):
-    def get_layers(self, gamepad, keyboard):
+    def get_layers(self, field, gamepad, keyboard):
         lg = LayerGraph()
         lg.add_chain([
             layer.WinLayer(),
@@ -134,7 +134,7 @@ class SampleAutonomousOpmode(AbstractOpmode):
 
 
 class RatAutonomousOpmode(AbstractOpmode):
-    def get_layers(self, gamepad, keyboard):
+    def get_layers(self, field, gamepad, keyboard):
         lg = LayerGraph()
         lg.add_chain([
             layer.WinLayer(),
@@ -153,7 +153,7 @@ class RatAutonomousOpmode(AbstractOpmode):
 # +x = 0 rotation direction
 # +y = pi/2 radians rotation direction
 class EscapeTestAutonomousOpmode(AbstractOpmode):
-    def get_layers(self, gamepad, keyboard):
+    def get_layers(self, field, gamepad, keyboard):
         lg = LayerGraph()
         pathfinder = layer.pathfinding.DynwinPathfinder(task.drive.TankDriveTask)
         drive = layer.drive.TwoWheelDrive()
@@ -181,8 +181,25 @@ class EscapeTestAutonomousOpmode(AbstractOpmode):
         }
 
 
+class TurretTestAutonomousOpmode(AbstractOpmode):
+    def get_layers(self, field, gamepad, keyboard):
+        lg = LayerGraph()
+        lg.add_chain([
+            layer.WinLayer(),
+            layer.peripheral.SensorTurretLayer(),
+            localization.TemplateMatchingLocalizationSource(field)
+        ])
+        return lg
+
+    def get_robot_spec(self):
+        return {
+            'servocontroller': 1,
+            'distancesensor': 1,
+        }
+
+
 class NoopAutonomousOpmode(AbstractOpmode):
-    def get_layers(self, gamepad, keyboard):
+    def get_layers(self, field, gamepad, keyboard):
         return LayerGraph()
 
     def get_robot_spec(self):

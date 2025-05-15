@@ -169,7 +169,7 @@ class ServoTurret:
 
     def move(self):
         now = time.time()
-        if now - self._last_moved > self._frt:
+        if now - self._last_moved > self._srt:
             self._last_moved = now
             self._state = not self._state
             self._servo.set_position(self._range[int(self._state)])

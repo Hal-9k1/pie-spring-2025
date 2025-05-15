@@ -26,9 +26,11 @@ class DynwinPathfinder(Layer):
     TARGET_ANGLE_SMOOTHING_K = 1
     CLEARANCE_STEP = 0.05
 
-    def __init__(self, output_task_type):
+    def __init__(self, field, output_task_type):
         if output_task_type not in (TankDriveTask, HolonomicDriveTask):
             raise ValueError('Invalid output task type')
+        for obstacle in field.get_pathfinding_obstacles():
+            self.add_obstacle(obstacle)
         self._output_task_type = output_task_type
         self._task = None
         self._l10n_task = None
@@ -251,9 +253,10 @@ class DynamicObstacle(Obstacle):
         return min(ep1.add(point.mul(-1)).len(), ep2.add(point.mul(-1)).len())
 
 class StaticObstacle(Obstacle):
-    def __init__(self, transform, size):
+    def __init__(self, transform, size, invert=False):
         self._transform = transform
         self._size = size
+        self._invert = False
 
     def get_distance_to(self, point):
         p = self._transform.inv().mul(point)
@@ -261,4 +264,4 @@ class StaticObstacle(Obstacle):
         m2 = -m1
         use_height = _signum(p.get_y() - m1) == _signum(p.get_y() - m2)
         dim = self._size.get_y() if use_height else self._size.get_x()
-        return p.len() - dim / (2 * cos(p.get_angle()))
+        return p.len() - dim / (2 * cos(p.get_angle())) * (-1 if self._invert else 1)

@@ -47,6 +47,14 @@ spring_2025 = {
         device_id = '8_13954385401213213672',
         noise_threshold = 2,
     ),
+    'sensor_turret_servo': ServoConf(
+        controller_id = '4_4907772656414335786',
+        channel = '0',
+    ),
+    'turret_sensor': DistanceSensorConf(
+        device_id = '8_4126596456779635307',
+        noise_threshold = 2,
+    ),
 }
 
 spring_2024 = {

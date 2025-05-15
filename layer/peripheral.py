@@ -1,6 +1,9 @@
 from layer import Layer
+from devices import DistanceSensor
 from devices import Motor
 from devices import Servo
+from mechanisms import ServoTurret
+from task import WinTask
 from task.manipulator import DriveBeltTask
 from task.manipulator import DriveButtonPusherTask
 from task.manipulator import DriveWheelBeltTask
@@ -87,8 +90,8 @@ class ButtonPusherLayer(Layer):
 
 
 class SensorTurretLayer(Layer):
-    FULL_RANGE_TIME = 0.5
-    SAFE_RANGE = (-1, 1)
+    FULL_RANGE_TIME = 0.75
+    SAFE_RANGE = (-1, 0.6)
 
     def setup(self, setup_info):
         self._turret = ServoTurret(
@@ -117,10 +120,11 @@ class SensorTurretLayer(Layer):
             self._turret.move()
             if self._should_emit and self._sensor.can_read():
                 self._should_emit = False
-                self.emit_subtask(SensorTurretTask(
+                ctx.emit_subtask(SensorTurretTask(
                     self._turret.get_angle(),
                     self._sensor.get_distance(),
                 ))
+                print('emit')
         else:
             ctx.request_task()
 
