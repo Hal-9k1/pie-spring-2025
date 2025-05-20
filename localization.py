@@ -195,17 +195,17 @@ class NewtonHistory:
 
 
 class NewtonLocalizer(RobotLocalizer):
-    POS_NEWTON_STEPS = 640
-    POS_NEWTON_ROOTS = 8
+    POS_NEWTON_STEPS = 320
+    POS_NEWTON_ROOTS = 1
     POS_NEWTON_INITIAL_SPEED = 4
     POS_NEWTON_DISTURBANCE_SIZE = 4
     POS_NEWTON_ROOT_EPSILON = 0.01
     POS_NEWTON_FLAT_THRESHOLD = 10**-9
-    POS_NEWTON_SPEED_DAMPING = 0.9
+    POS_NEWTON_SPEED_DAMPING = 0.92
     POS_NEWTON_MIN_SPEED = 10**-1
-    POS_NEWTON_MIN_IMPROVEMENT = 10**-9
-    POS_NEWTON_HIST_LENGTH = 64
-    POS_NEWTON_HIST_WEIGHT = 0
+    POS_NEWTON_MIN_IMPROVEMENT = 10**-4
+    POS_NEWTON_HIST_LENGTH = 32
+    POS_NEWTON_HIST_WEIGHT = 10**-2
     POS_NEWTON_MIN_GRAD_LEN = 10**-2
 
     ROT_NEWTON_STEPS = 160
@@ -238,6 +238,7 @@ class NewtonLocalizer(RobotLocalizer):
                     self._get_data(src).get_position_probability(xy)
                     for src in self._sources
                 )
+                old_probability = probability
                 for j in range(self.POS_NEWTON_STEPS + 1):
                     nxy = xy.mul(-1)
                     overlapping_maxima = [
@@ -274,11 +275,11 @@ class NewtonLocalizer(RobotLocalizer):
                                 + hist.accumulate()
                             ) * speed
                             _clean_print(f'grad {grad}[{grad.len()}] delta {delta} speed {speed}')
-                            probability = sum(
+                            new_probability = sum(
                                 self._get_data(src).get_position_probability(xy + delta)
                                 for src in self._sources
                             )
-                            if probability - old_probability < self.POS_NEWTON_MIN_IMPROVEMENT:
+                            if new_probability - old_probability < self.POS_NEWTON_MIN_IMPROVEMENT:
                                 speed *= self.POS_NEWTON_SPEED_DAMPING
                                 if speed < self.POS_NEWTON_MIN_SPEED:
                                     _clean_print('terminate slowness\n')
@@ -286,9 +287,10 @@ class NewtonLocalizer(RobotLocalizer):
                                 delta = Vec2.zero()
                                 _clean_print('slow')
                             else:
+                                probability = new_probability
                                 speed = self.POS_NEWTON_INITIAL_SPEED
                                 _clean_print('    ')
-                            _clean_print(f'{probability - old_probability}')
+                            _clean_print(f'({probability} {probability - old_probability})')
                         else:
                             # Terminate this maximum path immediately
                             _clean_print('terminate flatness\n')
