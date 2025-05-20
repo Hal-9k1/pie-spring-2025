@@ -180,11 +180,12 @@ class ServoTurret:
         return self._get_pos() + frac * (self._range[1] - self._range[0]) / resolution
 
     def _get_pos(self):
-        frac = (
-            ((1 if self._div_count == self._resolution else (self._div_count / self._resolution) % 1) - 0.5)
-            * (-1 if self._div_count % (2 * self._resolution) > self._resolution else 1)
-            + 0.5
-        )
+        wrapped_double = self._div_count % (2 * self._resolution)
+        wrapped = wrapped_double % (self._resolution + 1)
+        half_frac = wrapped / self._resolution
+        if wrapped_double > self._resolution:
+            frac = 1 - half_frac
+        else:
+            frac = half_frac
         pos = frac * (self._range[1] - self._range[0]) + self._range[0]
-        print(frac, pos)
         return pos

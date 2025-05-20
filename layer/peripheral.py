@@ -90,9 +90,12 @@ class ButtonPusherLayer(Layer):
 
 
 class SensorTurretLayer(Layer):
-    SAFE_RANGE_TIME = 1
+    SAFE_RANGE_TIME = 5
     SAFE_RANGE = (-1, 0.6)
     MOVE_RESOLUTION = 20
+
+    def __init__(self, persist=False):
+        self._persist = persist
 
     def setup(self, setup_info):
         self._turret = ServoTurret(
@@ -127,7 +130,7 @@ class SensorTurretLayer(Layer):
                     self._sensor.get_distance(),
                 ))
                 print('emit')
-        else:
+        if not self._running or not self._persist:
             ctx.request_task()
 
     def accept_task(self, task):
