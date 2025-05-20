@@ -90,14 +90,16 @@ class ButtonPusherLayer(Layer):
 
 
 class SensorTurretLayer(Layer):
-    FULL_RANGE_TIME = 0.75
+    SAFE_RANGE_TIME = 1
     SAFE_RANGE = (-1, 0.6)
+    MOVE_RESOLUTION = 20
 
     def setup(self, setup_info):
         self._turret = ServoTurret(
             setup_info.get_device(Servo, 'sensor_turret_servo'),
-            self.FULL_RANGE_TIME,
-            self.SAFE_RANGE
+            self.SAFE_RANGE,
+            self.SAFE_RANGE_TIME,
+            self.MOVE_RESOLUTION
         )
         self._sensor = setup_info.get_device(DistanceSensor, 'turret_sensor')
         self._running = False
