@@ -13,7 +13,7 @@ from task.drive import AxialMovementTask
 from task.drive import TankDriveTask
 from task.drive import TurnTask
 from units import convert
-from localization import EncoderDriveSystem
+from localization.source import EncoderDriveSystem
 
 
 class TwoWheelDrive(Layer, EncoderDriveSystem):

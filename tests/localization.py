@@ -2,8 +2,8 @@ from controller import LayerGraph
 from controller import RobotController
 from layer import Layer
 from localization import LocalizationSource
-from localization import NewtonLocalizer
-from localization import SqFalloffLocalizationData
+from localization.localizer import NewtonLocalizer
+from localization.data import SqFalloffLocalizationData
 from log import LoggerProvider
 from matrix import Mat2
 from matrix import Mat3
