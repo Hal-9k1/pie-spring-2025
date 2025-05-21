@@ -63,11 +63,11 @@ class TestNewtonLocalizer(TestRobotControllerBase):
         self.assertLess(abs(delta_theta), 0.001, resolved.get_direction().get_angle())
 
     def test_localize_one_source_many(self):
-        self.skipTest('debugging')
+        self.skipTest('Looooong test has about 30% failure rate of subtests')
         self._test_localize_many(TestNewtonLocalizer._test_localize_one_source)
 
     def test_localize_eq_source_many(self):
-        self.skipTest('debugging')
+        self.skipTest('Looooong test has about 30% failure rate of subtests')
         self._test_localize_many(TestNewtonLocalizer._test_localize_eq_source)
 
     def _test_localize_many(self, f):
