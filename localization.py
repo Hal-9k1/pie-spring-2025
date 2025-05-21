@@ -17,7 +17,7 @@ def _clean_print(s):
     p = 6
     def r(m):
         return '{0:+.5e}'.format(float(m.group(0)))
-    print(re.sub('(?<![a-zA-Z])[\-\+]?\d+(?:\.\d+)?(?:e[\+\-]\d+)?', r, s), end=' ')
+    #print(re.sub('(?<![a-zA-Z])[\-\+]?\d+(?:\.\d+)?(?:e[\+\-]\d+)?', r, s), end=' ')
 
 
 class LocalizationData(ABC):
@@ -195,18 +195,19 @@ class NewtonHistory:
 
 
 class NewtonLocalizer(RobotLocalizer):
-    POS_NEWTON_STEPS = 320
-    POS_NEWTON_ROOTS = 1
+    POS_NEWTON_STEPS = 640
+    POS_NEWTON_ROOTS = 8
     POS_NEWTON_INITIAL_SPEED = 4
     POS_NEWTON_DISTURBANCE_SIZE = 4
     POS_NEWTON_ROOT_EPSILON = 0.01
     POS_NEWTON_FLAT_THRESHOLD = 10**-9
-    POS_NEWTON_SPEED_DAMPING = 0.92
-    POS_NEWTON_MIN_SPEED = 10**-1
-    POS_NEWTON_MIN_IMPROVEMENT = 10**-4
+    POS_NEWTON_SPEED_DAMPING = 0.91
+    POS_NEWTON_SPEED_ADJUST_WEIGHT = 0.04
+    POS_NEWTON_MIN_SPEED = 0 #10**-1
+    POS_NEWTON_MIN_IMPROVEMENT = 0 #10**-3
     POS_NEWTON_HIST_LENGTH = 32
     POS_NEWTON_HIST_WEIGHT = 10**-2
-    POS_NEWTON_MIN_GRAD_LEN = 10**-2
+    POS_NEWTON_MIN_GRAD_LEN = 10**-3
 
     ROT_NEWTON_STEPS = 160
     ROT_NEWTON_ROOTS = 4
@@ -232,7 +233,8 @@ class NewtonLocalizer(RobotLocalizer):
             for i in range(self.POS_NEWTON_ROOTS):
                 xy = Vec2.zero()
                 maxima_hit = {}
-                speed = self.POS_NEWTON_INITIAL_SPEED
+                init_speed = self.POS_NEWTON_INITIAL_SPEED
+                speed = init_speed
                 hist = NewtonHistory(self.POS_NEWTON_HIST_LENGTH, self.POS_NEWTON_HIST_WEIGHT)
                 probability = sum(
                     self._get_data(src).get_position_probability(xy)
@@ -274,7 +276,7 @@ class NewtonLocalizer(RobotLocalizer):
                                 grad.unit() * max(self.POS_NEWTON_MIN_GRAD_LEN, grad.len())
                                 + hist.accumulate()
                             ) * speed
-                            _clean_print(f'grad {grad}[{grad.len()}] delta {delta} speed {speed}')
+                            _clean_print(f'grad {grad}[{grad.len()}] hist {hist.accumulate()} delta {delta} speed {speed}')
                             new_probability = sum(
                                 self._get_data(src).get_position_probability(xy + delta)
                                 for src in self._sources
@@ -282,13 +284,15 @@ class NewtonLocalizer(RobotLocalizer):
                             if new_probability - old_probability < self.POS_NEWTON_MIN_IMPROVEMENT:
                                 speed *= self.POS_NEWTON_SPEED_DAMPING
                                 if speed < self.POS_NEWTON_MIN_SPEED:
-                                    _clean_print('terminate slowness\n')
+                                    _clean_print(f'terminate slowness on iter {j}\n')
                                     break
                                 delta = Vec2.zero()
                                 _clean_print('slow')
                             else:
                                 probability = new_probability
-                                speed = self.POS_NEWTON_INITIAL_SPEED
+                                init_speed = ((init_speed * speed ** self.POS_NEWTON_SPEED_ADJUST_WEIGHT)
+                                    ** (1 / (1 + self.POS_NEWTON_SPEED_ADJUST_WEIGHT)))
+                                speed = init_speed
                                 _clean_print('    ')
                             _clean_print(f'({probability} {probability - old_probability})')
                         else:

@@ -63,11 +63,11 @@ class TestNewtonLocalizer(TestRobotControllerBase):
         self.assertLess(abs(delta_theta), 0.001, resolved.get_direction().get_angle())
 
     def test_localize_one_source_many(self):
-        self.skipTest('Debugging in test_localize_eq_source_single')
+        self.skipTest('debugging')
         self._test_localize_many(TestNewtonLocalizer._test_localize_one_source)
 
     def test_localize_eq_source_many(self):
-        self.skipTest('Debugging in test_localize_eq_source_single')
+        self.skipTest('debugging')
         self._test_localize_many(TestNewtonLocalizer._test_localize_eq_source)
 
     def _test_localize_many(self, f):
@@ -94,9 +94,10 @@ class TestNewtonLocalizer(TestRobotControllerBase):
                     raise result
 
     def test_localize_one_source_single(self):
+        seed(0)
         tfm = Mat3.from_transform(
             Mat2.from_angle(2),
-            Vec2(2, -3)
+            Vec2(4.125, -1.375)
         )
         self._check_tfm(
             TestNewtonLocalizer._test_rc(Mat3.identity(), [ConstantLocalizationSource(tfm)]),
@@ -104,7 +105,7 @@ class TestNewtonLocalizer(TestRobotControllerBase):
         )
 
     def test_localize_eq_source_single(self):
-        self.skipTest('Testing test_localize_one_source_single')
+        seed(0)
         tfm = Mat3.from_transform(
             Mat2.from_angle(2),
             Vec2(2, -3)
