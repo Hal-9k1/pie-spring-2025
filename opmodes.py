@@ -14,6 +14,7 @@ import layer.pathfinding
 import layer.peripheral
 import layer.strategy
 import localization
+import localization.source
 import math
 import task.drive
 import time
@@ -161,9 +162,9 @@ class EscapeTestAutonomousOpmode(AbstractOpmode):
             Mat2.from_angle(0),
             Vec2(1.087, 0.356)
         ))
-        anti_tp_loc_src = localization.AntiTeleportationLocalizationSource()
+        anti_tp_loc_src = localization.source.AntiTeleportationLocalizationSource()
         localizer.register_source(anti_tp_loc_src)
-        localizer.register_source(localization.EncoderLocalizationSource(drive))
+        localizer.register_source(localization.source.EncoderLocalizationSource(drive))
         lg.add_chain([
             layer.WinLayer(),
             layer.strategy.EscapeTestStrategy(),
@@ -187,7 +188,7 @@ class TurretTestAutonomousOpmode(AbstractOpmode):
         lg.add_chain([
             layer.WinLayer(),
             layer.peripheral.SensorTurretLayer(),
-            localization.TemplateMatchingLocalizationSource(field)
+            localization.source.TemplateMatchingLocalizationSource(field)
         ])
         return lg
 
