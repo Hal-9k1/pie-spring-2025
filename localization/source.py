@@ -10,7 +10,7 @@ from task.sensory import SensorTurretTask
 from matrix import Mat3
 
 
-class PersistenceLocalizationSource(Layer, LocalizationSource):
+class AntiTeleportationLocalizationSource(Layer, LocalizationSource):
     FIN_DIFF_EPSILON = 0.0001
     POSITION_PRECISION = 1
     ROTATION_PRECISION = 1
