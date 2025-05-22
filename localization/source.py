@@ -8,6 +8,7 @@ from localization.data import SqFalloffLocalizationData
 from task.sensory import LocalizationTask
 from task.sensory import SensorTurretTask
 from matrix import Mat3
+import math
 
 
 class AntiTeleportationLocalizationSource(Layer, LocalizationSource):
@@ -90,15 +91,90 @@ class AbstractStaticObstacleLocalizationSource(Layer, LocalizationSource):
         raise NotImplementedError
 
 
+class _Image:
+    def __init__(self, width, height, data=None):
+        self._width = width
+        self._height = height
+        self._data = array('B', data or [0] * width * height)
+
+    def get_norm(self, x, y):
+        x_norm = max(0, min(self._width, x * self._width))
+        y_norm = max(0, min(self._height, y * self._height))
+        x_frac = x_norm % 1
+        x_comp = 1 - x_frac
+        y_frac = y_norm % 1
+        y_comp = 1 - y_frac
+        x_high = min(self._width, int(math.floor(x_norm + 1)))
+        x_low = int(x_norm)
+        y_high = min(self._height, int(math.floor(y_norm + 1)))
+        y_low = int(y_norm)
+        p00 = self._data[self._index(x_low, y_low)]
+        p10 = self._data[self._index(x_high, y_low)]
+        p01 = self._data[self._index(x_low, y_high)]
+        p11 = self._data[self._index(x_high, y_high)]
+        return (
+            p00 * x_comp * y_comp +
+            p10 * x_frac * y_comp +
+            p01 * x_comp * y_frac +
+            p11 * x_frac * y_frac
+        )
+
+    def draw(self, draw_func):
+        for i in len(self._data):
+            self._data[i] = draw_func(
+                (i % self._width) / self._width,
+                (i // self._width) / self._height
+            )
+
+    def template_match(self, img):
+        result = _Image(self._width - img._width, self._height - img._height)
+        for ay in range(self._height - img._height):
+            for ax in range(self._width - img._width):
+                for by in range(img._height):
+                    asi = self._index(ax, ay + by)
+                    aei = self._index(ax + img._width, ay + by)
+                    ar = self._data[asi:aei]
+                    br = img._data[img._index(0, by):img._index(0, by + 1)]
+                    # Use ceil so 0 error always means exact match
+                    result._data[result._index(ax, ay)] = int(
+                        sum([math.ceil(abs(a - b) / 2) for a, b in zip(ar, br)])
+                    )
+        return result
+
+    def convolve(self, img):
+        raise NotImplementedError('Broken, kernel is anchored at top left instead of floor center')
+        result = _Image(self._width, self._height)
+        for ay in range(self._height):
+            for ax in range(self._width):
+                for by in range(img._height):
+                    asi = self._index(ax, min(ay + by, self._height - 1))
+                    aei = self._index(min(ax, self._width - 1), min(ay + by, self._height - 1))
+                    ar = self._data[asi:aei]
+                    br = img._data[img._index(0, by):img._index(0, by + 1)]
+                    len_diff = len(ar) - len(br)
+                    if len_diff > 0:
+                        ar += [ar[-1]] * len_diff
+                    result._data[result._index(ax, ay)] = int(
+                        sum([int(a * b / 255**2) for a, b in zip(ar, br)])
+                    )
+        return result
+
+    def _index(self, x, y):
+        return self._width * y + x
+
+
+
 class TemplateMatchingLocalizationSource(AbstractStaticObstacleLocalizationSource):
     DETECTION_LIFETIME = 1
     PX_PER_M = 100
 
     def __init__(self, field):
         super().__init__(self.DETECTION_LIFETIME)
-        size_m = field.get_size()
-        len_px = size_m.get_x() * size_m.get_y() * self.PX_PER_M**2
-        field_img = array('B', [0] * len_px)
+        size = field.get_size() * self.PX_PER_M
+        self._field_img = _Image(size.get_x(), size.get_y())
+        self._field_img.draw(lambda x, y: sum(
+            o.get_distance_to(Vec(x / self.PX_PER_M, y / self.PX_PER_M)) # TODO: clamp distance, invert on range, multiply by scaling constants
+        ))
 
     def _localize_from_detections(self, dets):
         pass

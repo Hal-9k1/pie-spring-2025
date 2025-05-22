@@ -61,7 +61,7 @@ class Field:
             self._obstacles.append(self.TYPES[data[0]](data[1:]))
 
     def get_pathfinding_obstacles(self):
-        return (o.to_pathfinding() for o in self._obstacles)
+        return [o.to_pathfinding() for o in self._obstacles]
 
     def get_bounding_rect(self):
         tl = Vec2(math.inf, math.inf)
