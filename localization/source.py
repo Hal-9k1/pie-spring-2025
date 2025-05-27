@@ -167,17 +167,43 @@ class _Image:
 class TemplateMatchingLocalizationSource(AbstractStaticObstacleLocalizationSource):
     DETECTION_LIFETIME = 1
     PX_PER_M = 100
+    FIELD_OUTLINE_RADIUS_PX = 20
+    MAX_DETECTION_DIST_CM = 10
+    DETECTION_RADIUS_CM = 5
 
     def __init__(self, field):
         super().__init__(self.DETECTION_LIFETIME)
         size = field.get_size() * self.PX_PER_M
         self._field_img = _Image(size.get_x(), size.get_y())
-        self._field_img.draw(lambda x, y: sum(
-            o.get_distance_to(Vec(x / self.PX_PER_M, y / self.PX_PER_M)) # TODO: clamp distance, invert on range, multiply by scaling constants
-        ))
+        self._field_img.draw(lambda x, y: self._draw_field_kernel(x, y, field))
 
     def _localize_from_detections(self, dets):
-        pass
+        template = _Image(2 * self.MAX_DETECTION_DIST_CM, self.MAX_DETECTION_DIST_CM)
+        points = [
+            Vec2(
+                det.get_distance() * (1 + math.cos(det.get_angle())),
+                det.get_distance() * math.sin(det.get_angle())
+            )
+            for det in dets if det.get_distance() < self.MAX_DETECTION_DIST_CM
+        ]
+        template.draw(lambda x, y: self._draw_detections_kernel(x, y, points))
+        # match many rotations of template against self._field_img
+
+    def _draw_field_kernel(self, x, y, field):
+        sum_abs_dist_px = sum([
+            abs(o.get_distance_to(x / self.PX_PER_M, y / self.PX_PER_M))
+            for o in self._field.get_pathfinding_obstacles()
+        ]) * self.PX_PER_M
+        norm_dist = min(self.FIELD_OUTLINE_RADIUS_PX, sub_abs_dist_px) / self.FIELD_OUTLINE_RADIUS_PX
+        return (1 - norm_dist) * 255
+
+    def _draw_detections_kernel(self, x, y, points):
+        sum_abs_dist_px = sum([
+            point.add(Vec2(x / self.PX_PER_M, y / self.PX_PER_M) * -1).len()
+            for point in points
+        ]) * self.PX_PER_M
+        norm_dist = min(self.DETECTION_RADIUS_PX, sub_abs_dist_px) / self.DETECTION_RADIUS_PX
+        return (1 - norm_dist) * 255
 
 
 class EncoderLocalizationSource(LocalizationSource):
