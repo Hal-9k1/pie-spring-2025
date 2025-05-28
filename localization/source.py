@@ -207,11 +207,14 @@ class TemplateMatchingLocalizationSource(AbstractStaticObstacleLocalizationSourc
 
     def _draw_field_kernel(self, x, y, field):
         sum_abs_dist_px = sum([
-            abs(o.get_distance_to(Vec2(x * self._size_m.get_x(), y * self._size_m.get_y())))
+            min(
+                abs(o.get_distance_to(Vec2(x * self._size_m.get_x(), y * self._size_m.get_y()))),
+                self.FIELD_OUTLINE_RADIUS_PX / self.PX_PER_M
+            )
             for o in field.get_pathfinding_obstacles()
-        ]) * self.PX_PER_M
-        norm_dist = min(self.FIELD_OUTLINE_RADIUS_PX, sum_abs_dist_px) / self.FIELD_OUTLINE_RADIUS_PX
-        return (1 - norm_dist) * 255
+        ])
+        norm_dist = sum_abs_dist_px / self.FIELD_OUTLINE_RADIUS_PX
+        return (1 - norm_dist) * 255 * self.PX_PER_M
 
     def _draw_detections_kernel(self, x, y, points):
         sum_abs_dist_px = sum([

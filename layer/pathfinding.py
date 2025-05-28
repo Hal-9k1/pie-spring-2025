@@ -262,6 +262,7 @@ class StaticObstacle(Obstacle):
         p = self._transform.inv().mul(point)
         m1 = self._size.get_y() / self._size.get_x()
         m2 = -m1
-        use_height = _signum(p.get_y() - m1) == _signum(p.get_y() - m2)
+        m = p.get_y() / p.get_x() if p.get_x() != 0 else inf
+        use_height = _signum(m - m1) == _signum(m - m2)
         dim = self._size.get_y() if use_height else self._size.get_x()
         return p.len() - dim / (2 * cos(p.get_angle())) * (-1 if self._invert else 1)

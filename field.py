@@ -46,6 +46,26 @@ class FieldRect(FieldObject):
         )
 
 
+class FieldCircle(FieldObject):
+    def __init__(self, data):
+        self._center = data[0]
+        self._radius = data[1]
+
+    def get_bounding_rect(self):
+        rr = Vec2(self._radius, self._radius)
+        return (
+            self._center - rr,
+            self._center + rr
+        )
+
+    def to_pathfinding(self):
+        class CircleObstacle(PathfindingObstacle):
+            def get_distance_to(selff, point):
+                return (point - self._center).len() - self._radius
+
+        return CircleObstacle()
+
+
 class FieldBounds(FieldRect):
     def __init__(self, data):
         super().__init__(data, True)
@@ -55,17 +75,21 @@ class Field:
     TYPES = {
         'rect': FieldRect,
         'bounds': FieldBounds,
+        'circle': FieldCircle,
     }
 
     def __init__(self, data):
         self._obstacles = []
+        self._path_obstacles = None
         for obstacle in data:
             if obstacle[0] not in self.TYPES:
                 raise ValueError(f'Invalid field object type {obstacle[0]}')
             self._obstacles.append(self.TYPES[obstacle[0]](obstacle[1:]))
 
     def get_pathfinding_obstacles(self):
-        return [o.to_pathfinding() for o in self._obstacles]
+        if not self._path_obstacles:
+            self._path_obstacles = [o.to_pathfinding() for o in self._obstacles]
+        return self._path_obstacles
 
     def get_bounding_rect(self):
         tl = Vec2(math.inf, math.inf)
@@ -82,5 +106,7 @@ class Field:
 
 
 spring_2025 = Field([
-    ('bounds', convert(Vec2(9, 12), 'ft', 'm') * 0.5, convert(Vec2(9, 12), 'ft', 'm'), 0),
+    #('rect', convert(Vec2(9, 12), 'ft', 'm') * 0.5, convert(Vec2(9, 12), 'ft', 'm'), 0),
+    ('circle', Vec2(1, 1), 1),
+    ('circle', Vec2(2, 2), 1),
 ])
