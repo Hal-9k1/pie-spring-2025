@@ -1,7 +1,11 @@
 from abc import ABC
 from abc import abstractmethod
 from layer.pathfinding import Obstacle as PathfindingObstacle
+from layer.pathfinding import StaticObstacle
+from matrix import Mat2
+from matrix import Mat3
 from matrix import Vec2
+from units import convert
 import math
 
 
@@ -35,9 +39,9 @@ class FieldRect(FieldObject):
         return StaticObstacle(
             Mat3.from_transform(
                 Mat2.from_angle(self._angle),
-                Vec2(*self._center)
+                self._center
             ),
-            Vec2(*self._size),
+            self._size,
             self._is_inverted
         )
 
@@ -56,9 +60,9 @@ class Field:
     def __init__(self, data):
         self._obstacles = []
         for obstacle in data:
-            if data[0] not in self.TYPES:
-                raise ValueError(f'Invalid field object type {data[0]}')
-            self._obstacles.append(self.TYPES[data[0]](data[1:]))
+            if obstacle[0] not in self.TYPES:
+                raise ValueError(f'Invalid field object type {obstacle[0]}')
+            self._obstacles.append(self.TYPES[obstacle[0]](obstacle[1:]))
 
     def get_pathfinding_obstacles(self):
         return [o.to_pathfinding() for o in self._obstacles]
@@ -78,5 +82,5 @@ class Field:
 
 
 spring_2025 = Field([
-
+    ('bounds', convert(Vec2(9, 12), 'ft', 'm') * 0.5, convert(Vec2(9, 12), 'ft', 'm'), 0),
 ])

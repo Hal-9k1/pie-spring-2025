@@ -253,8 +253,17 @@ class Vec2:
     def __add__(self, other):
         return self.add(other)
 
+    def __sub__(self, other):
+        return self.add(other.mul(-1))
+
     def __mul__(self, other):
         return self.mul(other)
+
+    def __truediv__(self, other):
+        return self.mul(1 / other)
+
+    def __floor__(self):
+        return Vec2(int(self._x // 1), int(self._y // 1))
 
     def __eq__(self, other):
         return isinstance(other, Vec2) and self._x == other._x and self._y == other._y

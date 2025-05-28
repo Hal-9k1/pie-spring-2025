@@ -1,8 +1,10 @@
 from layer import Layer
+from localization import RobotLocalizer
 from matrix import Mat2
 from matrix import Mat3
 from matrix import Vec2
 from random import random
+import math
 
 
 def _clean_print(s):

@@ -1,4 +1,5 @@
 from localization import LocalizationData
+from matrix import Vec2
 
 
 class AbstractFinDiffLocalizationData(LocalizationData):

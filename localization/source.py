@@ -8,6 +8,7 @@ from localization.data import SqFalloffLocalizationData
 from task.sensory import LocalizationTask
 from task.sensory import SensorTurretTask
 from matrix import Mat3
+from matrix import Vec2
 import math
 
 
@@ -91,13 +92,13 @@ class AbstractStaticObstacleLocalizationSource(Layer, LocalizationSource):
         raise NotImplementedError
 
 
-class _Image:
+class _ImageG8:
     def __init__(self, width, height, data=None):
         self._width = width
         self._height = height
         self._data = array('B', data or [0] * width * height)
 
-    def get_norm(self, x, y):
+    def get_interp(self, x, y, fill=None):
         x_norm = max(0, min(self._width, x * self._width))
         y_norm = max(0, min(self._height, y * self._height))
         x_frac = x_norm % 1
@@ -119,15 +120,15 @@ class _Image:
             p11 * x_frac * y_frac
         )
 
-    def draw(self, draw_func):
-        for i in len(self._data):
-            self._data[i] = draw_func(
+    def draw(self, kernel):
+        for i in range(len(self._data)):
+            self._data[i] = int(kernel(
                 (i % self._width) / self._width,
                 (i // self._width) / self._height
-            )
+            ))
 
     def template_match(self, img):
-        result = _Image(self._width - img._width, self._height - img._height)
+        result = _ImageG8(self._width - img._width, self._height - img._height)
         for ay in range(self._height - img._height):
             for ax in range(self._width - img._width):
                 for by in range(img._height):
@@ -141,23 +142,37 @@ class _Image:
                     )
         return result
 
-    def convolve(self, img):
-        raise NotImplementedError('Broken, kernel is anchored at top left instead of floor center')
-        result = _Image(self._width, self._height)
+    def convolve(self, kernel):
+        result = _ImageG8(self._width, self._height)
+        cxl = kernel._width // 2
+        cyl = kernel._height // 2
         for ay in range(self._height):
             for ax in range(self._width):
-                for by in range(img._height):
-                    asi = self._index(ax, min(ay + by, self._height - 1))
-                    aei = self._index(min(ax, self._width - 1), min(ay + by, self._height - 1))
-                    ar = self._data[asi:aei]
-                    br = img._data[img._index(0, by):img._index(0, by + 1)]
-                    len_diff = len(ar) - len(br)
-                    if len_diff > 0:
-                        ar += [ar[-1]] * len_diff
-                    result._data[result._index(ax, ay)] = int(
-                        sum([int(a * b / 255**2) for a, b in zip(ar, br)])
-                    )
+                v = 0
+                for by in range(kernel._height):
+                    ayi = min(self._height - 1, max(0, ay - cyl + by))
+                    for bx in range(kernel._width):
+                        axi = min(self._width - 1, max(0, ax - cxl + bx))
+                        d = self._data[self._index(axi, ayi)]
+                        w = kernel._data[kernel._index(bx, by)] / 128 - 1
+                        v += d * w
+                result._data[result._index(axi, ayi)] = int(max(0, min(255, v)))
         return result
+
+    def rotate(self, angle, anchor, fill):
+        result = _ImageG8(self._width, self._height)
+        tfm = Mat2.from_angle(-angle)
+        anchor_norm = Vec2(anchor.get_x() / self._width, anchor.get_y() / self._height)
+        result.draw(lambda x, y: self._draw_transformed_kernel(tfm, anchor_norm, fill, x, y))
+        return result
+
+    def _draw_transformed_kernel(self, tfm, anchor, fill, x, y):
+        pos = tfm * (Vec2(x, y) + (anchor * -1)) + anchor
+        rx = pos.get_x()
+        ry = pos.get_y()
+        if rx < 0 or rx > self._width or ry < 0 or ry > self._height:
+            return fill
+        return self.get_interp(rx, ry)
 
     def _index(self, x, y):
         return self._width * y + x
@@ -166,19 +181,20 @@ class _Image:
 
 class TemplateMatchingLocalizationSource(AbstractStaticObstacleLocalizationSource):
     DETECTION_LIFETIME = 1
-    PX_PER_M = 100
+    PX_PER_M = 50
     FIELD_OUTLINE_RADIUS_PX = 20
     MAX_DETECTION_DIST_CM = 10
     DETECTION_RADIUS_CM = 5
 
     def __init__(self, field):
         super().__init__(self.DETECTION_LIFETIME)
-        size = field.get_size() * self.PX_PER_M
-        self._field_img = _Image(size.get_x(), size.get_y())
+        self._size_m = field.get_size()
+        self._size_px = math.floor(self._size_m * self.PX_PER_M)
+        self._field_img = _ImageG8(self._size_px.get_x(), self._size_px.get_y())
         self._field_img.draw(lambda x, y: self._draw_field_kernel(x, y, field))
 
     def _localize_from_detections(self, dets):
-        template = _Image(2 * self.MAX_DETECTION_DIST_CM, self.MAX_DETECTION_DIST_CM)
+        template = _ImageG8(2 * self.MAX_DETECTION_DIST_CM, self.MAX_DETECTION_DIST_CM)
         points = [
             Vec2(
                 det.get_distance() * (1 + math.cos(det.get_angle())),
@@ -191,15 +207,15 @@ class TemplateMatchingLocalizationSource(AbstractStaticObstacleLocalizationSourc
 
     def _draw_field_kernel(self, x, y, field):
         sum_abs_dist_px = sum([
-            abs(o.get_distance_to(x / self.PX_PER_M, y / self.PX_PER_M))
-            for o in self._field.get_pathfinding_obstacles()
+            abs(o.get_distance_to(Vec2(x * self._size_m.get_x(), y * self._size_m.get_y())))
+            for o in field.get_pathfinding_obstacles()
         ]) * self.PX_PER_M
-        norm_dist = min(self.FIELD_OUTLINE_RADIUS_PX, sub_abs_dist_px) / self.FIELD_OUTLINE_RADIUS_PX
+        norm_dist = min(self.FIELD_OUTLINE_RADIUS_PX, sum_abs_dist_px) / self.FIELD_OUTLINE_RADIUS_PX
         return (1 - norm_dist) * 255
 
     def _draw_detections_kernel(self, x, y, points):
         sum_abs_dist_px = sum([
-            point.add(Vec2(x / self.PX_PER_M, y / self.PX_PER_M) * -1).len()
+            point.add(Vec2(x * self._size_m.get_x(), y * self._size_m.get_y()) * -1).len()
             for point in points
         ]) * self.PX_PER_M
         norm_dist = min(self.DETECTION_RADIUS_PX, sub_abs_dist_px) / self.DETECTION_RADIUS_PX

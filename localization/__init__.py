@@ -2,6 +2,7 @@ from abc import ABC
 from abc import abstractmethod
 from layer import Layer
 from matrix import Mat3
+from task.sensory import LocalizationTask
 import math
 import time
 
