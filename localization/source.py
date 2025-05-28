@@ -180,7 +180,7 @@ class _ImageG8:
 
 class TemplateMatchingLocalizationSource(AbstractStaticObstacleLocalizationSource):
     DETECTION_LIFETIME = 1
-    PX_PER_M = 20
+    PX_PER_M = 100
     FIELD_OUTLINE_RADIUS_PX = 5
     MAX_DETECTION_DIST_CM = 10
     DETECTION_RADIUS_CM = 5

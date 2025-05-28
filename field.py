@@ -107,6 +107,6 @@ class Field:
 
 spring_2025 = Field([
     ('bounds', convert(Vec2(9, 12), 'ft', 'm') / 2, convert(Vec2(9, 12), 'ft', 'm'), 0),
-    ('rect', Vec2(1, 1), convert(Vec2(4.5, 6), 'ft', 'm'), 0),
+    ('rect', convert(Vec2(9 + 10, 12) / 2, 'ft', 'm'), convert(Vec2(9, 12) / 4, 'ft', 'm'), 0),
     ('circle', convert(Vec2(82, 11.250), 'in', 'm'), convert(10.250, 'in', 'm')),
 ])
