@@ -121,11 +121,10 @@ class _ImageG8:
         )
 
     def draw(self, kernel):
-        for i in range(len(self._data)):
-            self._data[i] = int(kernel(
-                (i % self._width) / self._width,
-                (i // self._width) / self._height
-            ))
+        for y in range(self._height):
+            yf = y / self._height
+            for x in range(self._width):
+                self._data[self._index(x, y)] = int(kernel(x / self._width, yf))
 
     def template_match(self, img):
         result = _ImageG8(self._width - img._width, self._height - img._height)
@@ -181,8 +180,8 @@ class _ImageG8:
 
 class TemplateMatchingLocalizationSource(AbstractStaticObstacleLocalizationSource):
     DETECTION_LIFETIME = 1
-    PX_PER_M = 50
-    FIELD_OUTLINE_RADIUS_PX = 20
+    PX_PER_M = 20
+    FIELD_OUTLINE_RADIUS_PX = 5
     MAX_DETECTION_DIST_CM = 10
     DETECTION_RADIUS_CM = 5
 
@@ -191,7 +190,8 @@ class TemplateMatchingLocalizationSource(AbstractStaticObstacleLocalizationSourc
         self._size_m = field.get_size()
         self._size_px = math.floor(self._size_m * self.PX_PER_M)
         self._field_img = _ImageG8(self._size_px.get_x(), self._size_px.get_y())
-        self._field_img.draw(lambda x, y: self._draw_field_kernel(x, y, field))
+        obstacles = field.get_pathfinding_obstacles()
+        self._field_img.draw(lambda x, y: self._draw_field_kernel(x, y, obstacles))
 
     def _localize_from_detections(self, dets):
         template = _ImageG8(2 * self.MAX_DETECTION_DIST_CM, self.MAX_DETECTION_DIST_CM)
@@ -205,20 +205,26 @@ class TemplateMatchingLocalizationSource(AbstractStaticObstacleLocalizationSourc
         template.draw(lambda x, y: self._draw_detections_kernel(x, y, points))
         # match many rotations of template against self._field_img
 
-    def _draw_field_kernel(self, x, y, field):
-        sum_abs_dist_px = sum([
+    def _draw_field_kernel(self, x, y, obstacles):
+        radius_m = self.FIELD_OUTLINE_RADIUS_PX / self.PX_PER_M
+        sum_abs_dist = sum([
             min(
-                abs(o.get_distance_to(Vec2(x * self._size_m.get_x(), y * self._size_m.get_y()))),
-                self.FIELD_OUTLINE_RADIUS_PX / self.PX_PER_M
+                abs(
+                    o.get_distance_to(
+                        Vec2(x * self._size_m.get_x(), y * self._size_m.get_y())
+                        - self._size_m / 2
+                    )
+                ),
+                radius_m
             )
-            for o in field.get_pathfinding_obstacles()
+            for o in obstacles
         ])
-        norm_dist = sum_abs_dist_px / self.FIELD_OUTLINE_RADIUS_PX
-        return (1 - norm_dist) * 255 * self.PX_PER_M
+        norm_dist = max(0, min(1, sum_abs_dist / radius_m - len(obstacles) + 1))
+        return (1 - norm_dist) * 255
 
     def _draw_detections_kernel(self, x, y, points):
         sum_abs_dist_px = sum([
-            point.add(Vec2(x * self._size_m.get_x(), y * self._size_m.get_y()) * -1).len()
+            (point - Vec2(x * self._size_m.get_x(), y * self._size_m.get_y()) + self._field_tl).len()
             for point in points
         ]) * self.PX_PER_M
         norm_dist = min(self.DETECTION_RADIUS_PX, sub_abs_dist_px) / self.DETECTION_RADIUS_PX

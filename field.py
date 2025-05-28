@@ -102,11 +102,11 @@ class Field:
 
     def get_size(self):
         tl, br = self.get_bounding_rect()
-        return br + tl * -1
+        return br - tl
 
 
 spring_2025 = Field([
-    #('rect', convert(Vec2(9, 12), 'ft', 'm') * 0.5, convert(Vec2(9, 12), 'ft', 'm'), 0),
-    ('circle', Vec2(1, 1), 1),
-    ('circle', Vec2(2, 2), 1),
+    ('bounds', convert(Vec2(9, 12), 'ft', 'm') / 2, convert(Vec2(9, 12), 'ft', 'm'), 0),
+    ('rect', Vec2(1, 1), convert(Vec2(4.5, 6), 'ft', 'm'), 0),
+    ('circle', convert(Vec2(82, 11.250), 'in', 'm'), convert(10.250, 'in', 'm')),
 ])

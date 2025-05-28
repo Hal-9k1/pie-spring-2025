@@ -6,6 +6,7 @@ from math import inf
 from math import sin
 from math import sqrt
 from matrix import Mat3
+from matrix import Vec2
 from task.drive import HolonomicDriveTask
 from task.drive import TankDriveTask
 from task.objective import MoveToFieldTask
@@ -260,9 +261,11 @@ class StaticObstacle(Obstacle):
 
     def get_distance_to(self, point):
         p = self._transform.inv().mul(point)
-        m1 = self._size.get_y() / self._size.get_x()
-        m2 = -m1
-        m = p.get_y() / p.get_x() if p.get_x() != 0 else inf
-        use_height = _signum(m - m1) == _signum(m - m2)
-        dim = self._size.get_y() if use_height else self._size.get_x()
-        return p.len() - dim / (2 * cos(p.get_angle())) * (-1 if self._invert else 1)
+        tl = self._size / -2
+        br = self._size / 2
+        tlp = tl - p
+        brp = p - br
+        d = Vec2(max(tlp.get_x(), brp.get_x()), max(tlp.get_y(), brp.get_y()))
+        corner = Vec2(max(0, d.get_x()), max(0, d.get_y()))
+        edge = min(0, max(d.get_x(), d.get_y()))
+        return corner.len() + edge
