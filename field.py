@@ -1,10 +1,11 @@
 from abc import ABC
 from abc import abstractmethod
-from layer.pathfinding import Obstacle as PathfindingObstacle
-from layer.pathfinding import StaticObstacle
 from matrix import Mat2
 from matrix import Mat3
 from matrix import Vec2
+from obstacle import CircleObstacle
+from obstacle import Obstacle as PathfindingObstacle
+from obstacle import RectObstacle
 from units import convert
 import math
 
@@ -36,7 +37,7 @@ class FieldRect(FieldObject):
         )
 
     def to_pathfinding(self):
-        return StaticObstacle(
+        return RectObstacle(
             Mat3.from_transform(
                 Mat2.from_angle(self._angle),
                 self._center
@@ -59,11 +60,7 @@ class FieldCircle(FieldObject):
         )
 
     def to_pathfinding(self):
-        class CircleObstacle(PathfindingObstacle):
-            def get_distance_to(selff, point):
-                return (point - self._center).len() - self._radius
-
-        return CircleObstacle()
+        return CircleObstacle(self._center, self._radius)
 
 
 class FieldBounds(FieldRect):
@@ -107,6 +104,5 @@ class Field:
 
 spring_2025 = Field([
     ('bounds', convert(Vec2(9, 12), 'ft', 'm') / 2, convert(Vec2(9, 12), 'ft', 'm'), 0),
-    ('rect', convert(Vec2(9 + 10, 12) / 2, 'ft', 'm'), convert(Vec2(9, 12) / 4, 'ft', 'm'), 0),
     ('circle', convert(Vec2(82, 11.250), 'in', 'm'), convert(10.250, 'in', 'm')),
 ])

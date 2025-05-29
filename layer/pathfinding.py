@@ -7,6 +7,7 @@ from math import sin
 from math import sqrt
 from matrix import Mat3
 from matrix import Vec2
+from obstacle import Obstacle
 from task.drive import HolonomicDriveTask
 from task.drive import TankDriveTask
 from task.objective import MoveToFieldTask
@@ -233,11 +234,6 @@ class Trajectory:
         return f"Trajectory({self._axial}, {self._lateral}, {self._yaw})"
 
 
-class Obstacle(ABC):
-    def get_distance_to(self, point):
-        raise NotImplementedError
-
-
 class DynamicObstacle(Obstacle):
     def __init__(self, transform, size):
         self._transform = transform
@@ -252,20 +248,3 @@ class DynamicObstacle(Obstacle):
         ep1 = self._transform.mul(Vec2(0, size / 2))
         ep2 = self._transform.mul(Vec2(0, -size / 2))
         return min(ep1.add(point.mul(-1)).len(), ep2.add(point.mul(-1)).len())
-
-class StaticObstacle(Obstacle):
-    def __init__(self, transform, size, invert=False):
-        self._transform = transform
-        self._size = size
-        self._invert = False
-
-    def get_distance_to(self, point):
-        p = self._transform.inv().mul(point)
-        tl = self._size / -2
-        br = self._size / 2
-        tlp = tl - p
-        brp = p - br
-        d = Vec2(max(tlp.get_x(), brp.get_x()), max(tlp.get_y(), brp.get_y()))
-        corner = Vec2(max(0, d.get_x()), max(0, d.get_y()))
-        edge = min(0, max(d.get_x(), d.get_y()))
-        return corner.len() + edge

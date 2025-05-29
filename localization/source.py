@@ -212,7 +212,6 @@ class TemplateMatchingLocalizationSource(AbstractStaticObstacleLocalizationSourc
                 abs(
                     o.get_distance_to(
                         Vec2(x * self._size_m.get_x(), y * self._size_m.get_y())
-                        - self._size_m / 2
                     )
                 ),
                 radius_m
