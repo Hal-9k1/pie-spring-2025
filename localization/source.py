@@ -121,10 +121,12 @@ class _ImageG8:
         )
 
     def draw(self, kernel):
+        i = 0
         for y in range(self._height):
             yf = y / self._height
             for x in range(self._width):
-                self._data[self._index(x, y)] = int(kernel(x / self._width, yf))
+                self._data[i] = int(kernel(x / self._width, yf))
+                i += 1
 
     def template_match(self, img):
         result = _ImageG8(self._width - img._width, self._height - img._height)
@@ -166,7 +168,7 @@ class _ImageG8:
         return result
 
     def _draw_transformed_kernel(self, tfm, anchor, fill, x, y):
-        pos = tfm * (Vec2(x, y) + (anchor * -1)) + anchor
+        pos = tfm * (Vec2(x * self._size.get_x(), y * self._size.get_y()) - anchor) + anchor
         rx = pos.get_x()
         ry = pos.get_y()
         if rx < 0 or rx > self._width or ry < 0 or ry > self._height:
@@ -181,7 +183,7 @@ class _ImageG8:
 class TemplateMatchingLocalizationSource(AbstractStaticObstacleLocalizationSource):
     DETECTION_LIFETIME = 1
     PX_PER_M = 100
-    FIELD_OUTLINE_RADIUS_PX = 5
+    FIELD_OUTLINE_RADIUS_PX = 10
     MAX_DETECTION_DIST_CM = 10
     DETECTION_RADIUS_CM = 5
 
@@ -212,6 +214,7 @@ class TemplateMatchingLocalizationSource(AbstractStaticObstacleLocalizationSourc
                 abs(
                     o.get_distance_to(
                         Vec2(x * self._size_m.get_x(), y * self._size_m.get_y())
+                        + self._size_m / 2
                     )
                 ),
                 radius_m
