@@ -65,7 +65,7 @@ class FieldCircle(FieldObject):
 
 class FieldBounds(FieldRect):
     def __init__(self, data):
-        super().__init__(data, True)
+        super().__init__((data[0] / 2, data[0], 0), True)
                 
 
 class Field:
@@ -103,6 +103,6 @@ class Field:
 
 
 spring_2025 = Field([
-    ('bounds', convert(Vec2(9, 12), 'ft', 'm') / 2, convert(Vec2(9, 12), 'ft', 'm'), 0),
+    ('bounds', convert(Vec2(9, 12), 'ft', 'm')),
     ('circle', convert(Vec2(82, 11.250), 'in', 'm'), convert(10.250, 'in', 'm')),
 ])

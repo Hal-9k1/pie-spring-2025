@@ -2,6 +2,8 @@ import tkinter as tk
 from localization.source import _ImageG8
 import field
 from localization.source import TemplateMatchingLocalizationSource
+from math import pi
+from matrix import Vec2
 
 
 _hold = set()
@@ -31,5 +33,9 @@ def demo2():
     src = TemplateMatchingLocalizationSource(field.spring_2025)
     show(src._field_img)
 
+def demo3():
+    src = TemplateMatchingLocalizationSource(field.spring_2025)
+    show(src._field_img.rotate(pi / 4, Vec2(0, 0), 0))
+
 if __name__ == '__main__':
-    demo2()
+    demo3()

@@ -7,6 +7,7 @@ from localization import LocalizationData
 from localization.data import SqFalloffLocalizationData
 from task.sensory import LocalizationTask
 from task.sensory import SensorTurretTask
+from matrix import Mat2
 from matrix import Mat3
 from matrix import Vec2
 import math
@@ -99,8 +100,8 @@ class _ImageG8:
         self._data = array('B', data or [0] * width * height)
 
     def get_interp(self, x, y, fill=None):
-        x_norm = max(0, min(self._width, x * self._width))
-        y_norm = max(0, min(self._height, y * self._height))
+        x_norm = max(0, min(self._width - 1, x * (self._width - 1)))
+        y_norm = max(0, min(self._height - 1, y * (self._height - 1)))
         x_frac = x_norm % 1
         x_comp = 1 - x_frac
         y_frac = y_norm % 1
@@ -109,6 +110,7 @@ class _ImageG8:
         x_low = int(x_norm)
         y_high = min(self._height, int(math.floor(y_norm + 1)))
         y_low = int(y_norm)
+        print(x_low, y_low, self._index(x_low, y_low), self._width, self._height)
         p00 = self._data[self._index(x_low, y_low)]
         p10 = self._data[self._index(x_high, y_low)]
         p01 = self._data[self._index(x_low, y_high)]
@@ -168,16 +170,15 @@ class _ImageG8:
         return result
 
     def _draw_transformed_kernel(self, tfm, anchor, fill, x, y):
-        pos = tfm * (Vec2(x * self._size.get_x(), y * self._size.get_y()) - anchor) + anchor
+        pos = tfm * (Vec2(x * self._width, y * self._height) - anchor) + anchor
         rx = pos.get_x()
         ry = pos.get_y()
-        if rx < 0 or rx > self._width or ry < 0 or ry > self._height:
+        if rx < 0 or rx >= self._width or ry < 0 or ry >= self._height:
             return fill
-        return self.get_interp(rx, ry)
+        return self.get_interp(rx / (self._width - 1), ry / (self._height - 1))
 
     def _index(self, x, y):
         return self._width * y + x
-
 
 
 class TemplateMatchingLocalizationSource(AbstractStaticObstacleLocalizationSource):
@@ -209,14 +210,10 @@ class TemplateMatchingLocalizationSource(AbstractStaticObstacleLocalizationSourc
 
     def _draw_field_kernel(self, x, y, obstacles):
         radius_m = self.FIELD_OUTLINE_RADIUS_PX / self.PX_PER_M
+        point = Vec2(x * self._size_m.get_x(), y * self._size_m.get_y())
         sum_abs_dist = sum([
             min(
-                abs(
-                    o.get_distance_to(
-                        Vec2(x * self._size_m.get_x(), y * self._size_m.get_y())
-                        + self._size_m / 2
-                    )
-                ),
+                abs(o.get_distance_to(point)),
                 radius_m
             )
             for o in obstacles

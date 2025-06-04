@@ -109,7 +109,7 @@ class Mat3:
                 *(self.row(row).dot(other.col(col)) for row in range(3) for col in range(3))
             )
         elif isinstance(other, Vec2):
-            extended = Vec3(other.get_x(), other.get_y(), 0.0)
+            extended = Vec3(other.get_x(), other.get_y(), 1.0)
             return Vec2(
                  self.row(0).dot(extended),
                  self.row(1).dot(extended)
