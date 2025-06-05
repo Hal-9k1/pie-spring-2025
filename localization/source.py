@@ -10,6 +10,7 @@ from task.sensory import SensorTurretTask
 from matrix import Mat2
 from matrix import Mat3
 from matrix import Vec2
+from multiprocessing import Pool
 import math
 
 
@@ -86,7 +87,7 @@ class AbstractStaticObstacleLocalizationSource(Layer, LocalizationSource):
 
     def collect_data(self):
         dets = [d[1] for d in self._detections]
-        self._localize_from_detections(dets)
+        return self._localize_from_detections(dets)
 
     @abstractmethod
     def _localize_from_detections(self, dets: list[LocalizationTask]) -> LocalizationData:
@@ -110,7 +111,6 @@ class _ImageG8:
         x_low = int(x_norm)
         y_high = min(self._height, int(math.floor(y_norm + 1)))
         y_low = int(y_norm)
-        print(x_low, y_low, self._index(x_low, y_low), self._width, self._height)
         p00 = self._data[self._index(x_low, y_low)]
         p10 = self._data[self._index(x_high, y_low)]
         p01 = self._data[self._index(x_low, y_high)]
@@ -122,13 +122,35 @@ class _ImageG8:
             p11 * x_frac * y_frac
         )
 
-    def draw(self, kernel):
-        i = 0
-        for y in range(self._height):
-            yf = y / self._height
-            for x in range(self._width):
-                self._data[i] = int(kernel(x / self._width, yf))
-                i += 1
+    def _draw_thread(args):
+        args[0]._draw_chunk(*args[1:])
+        return args[3]
+
+    def _draw_chunk(self, kernel, userdata, result, start, end):
+        for i in range(start, end):
+            yf = i // self._width / self._height
+            xf = (i % self._width) / self._width
+            res = kernel(xf, yf, userdata) if userdata else kernel(xf, yf)
+            result[i - start] = int(res)
+
+    def draw(self, kernel, num_threads=1, userdata=None):
+        total_px = self._width * self._height
+        if num_threads == 1:
+            self._draw_chunk(kernel, userdata, self._data, 0, total_px)
+        else:
+            self._data = array('B')
+            px_per_chunk = total_px // num_threads
+            last_px_per_chunk = total_px - (num_threads - 1) * px_per_chunk
+            def to_args(i):
+                is_last_chunk = i == num_threads - 1
+                num_px = last_px_per_chunk if is_last_chunk else px_per_chunk
+                buf = array('B', [0] * num_px)
+                start = px_per_chunk * i
+                end = total_px if is_last_chunk else start + px_per_chunk
+                return (self, kernel, userdata, buf, start, end)
+            with Pool(num_threads) as pool:
+                for chunk in pool.map(_ImageG8._draw_thread, [to_args(i) for i in range(num_threads)]):
+                    self._data.extend(chunk)
 
     def template_match(self, img):
         result = _ImageG8(self._width - img._width, self._height - img._height)
@@ -162,14 +184,19 @@ class _ImageG8:
                 result._data[result._index(axi, ayi)] = int(max(0, min(255, v)))
         return result
 
-    def rotate(self, angle, anchor, fill):
+    def rotate(self, angle, anchor, fill, num_threads=1):
         result = _ImageG8(self._width, self._height)
         tfm = Mat2.from_angle(-angle)
         anchor_norm = Vec2(anchor.get_x() / self._width, anchor.get_y() / self._height)
-        result.draw(lambda x, y: self._draw_transformed_kernel(tfm, anchor_norm, fill, x, y))
+        result.draw(
+            type(self)._draw_transformed_kernel,
+            num_threads=num_threads,
+            userdata=(self, tfm, anchor_norm, fill)
+        )
         return result
 
-    def _draw_transformed_kernel(self, tfm, anchor, fill, x, y):
+    def _draw_transformed_kernel(x, y, userdata):
+        self, tfm, anchor, fill = userdata
         pos = tfm * (Vec2(x * self._width, y * self._height) - anchor) + anchor
         rx = pos.get_x()
         ry = pos.get_y()
@@ -187,6 +214,7 @@ class TemplateMatchingLocalizationSource(AbstractStaticObstacleLocalizationSourc
     FIELD_OUTLINE_RADIUS_PX = 10
     MAX_DETECTION_DIST_CM = 10
     DETECTION_RADIUS_CM = 5
+    FIELD_DRAW_THREADS = 8
 
     def __init__(self, field):
         super().__init__(self.DETECTION_LIFETIME)
@@ -194,7 +222,11 @@ class TemplateMatchingLocalizationSource(AbstractStaticObstacleLocalizationSourc
         self._size_px = math.floor(self._size_m * self.PX_PER_M)
         self._field_img = _ImageG8(self._size_px.get_x(), self._size_px.get_y())
         obstacles = field.get_pathfinding_obstacles()
-        self._field_img.draw(lambda x, y: self._draw_field_kernel(x, y, obstacles))
+        self._field_img.draw(
+            type(self)._draw_field_kernel,
+            num_threads=self.FIELD_DRAW_THREADS,
+            userdata=(self, obstacles)
+        )
 
     def _localize_from_detections(self, dets):
         template = _ImageG8(2 * self.MAX_DETECTION_DIST_CM, self.MAX_DETECTION_DIST_CM)
@@ -208,7 +240,8 @@ class TemplateMatchingLocalizationSource(AbstractStaticObstacleLocalizationSourc
         template.draw(lambda x, y: self._draw_detections_kernel(x, y, points))
         # match many rotations of template against self._field_img
 
-    def _draw_field_kernel(self, x, y, obstacles):
+    def _draw_field_kernel(x, y, userdata):
+        self, obstacles = userdata
         radius_m = self.FIELD_OUTLINE_RADIUS_PX / self.PX_PER_M
         point = Vec2(x * self._size_m.get_x(), y * self._size_m.get_y())
         sum_abs_dist = sum([

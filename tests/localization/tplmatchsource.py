@@ -35,7 +35,7 @@ def demo2():
 
 def demo3():
     src = TemplateMatchingLocalizationSource(field.spring_2025)
-    show(src._field_img.rotate(pi / 4, Vec2(0, 0), 0))
+    show(src._field_img.rotate(pi / 4, Vec2(0, 0), 0, 8))
 
 if __name__ == '__main__':
     demo3()

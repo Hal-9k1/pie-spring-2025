@@ -28,9 +28,12 @@ class FieldRect(FieldObject):
         self._is_inverted = is_bounds
 
     def get_bounding_rect(self):
-        mat = Mat2.from_angle(self._angle)
-        tl = mat * (self._center - self._size * 0.5)
-        br = mat * (self._center + self._size * 0.5)
+        mat = Mat3.from_transform(
+            Mat2.from_angle(self._angle),
+            self._center
+        )
+        tl = mat * (self._size * -0.5)
+        br = mat * (self._size * 0.5)
         return (
             Vec2(min(tl.get_x(), br.get_x()), min(tl.get_y(), br.get_y())),
             Vec2(max(tl.get_x(), br.get_x()), max(tl.get_y(), br.get_y()))
