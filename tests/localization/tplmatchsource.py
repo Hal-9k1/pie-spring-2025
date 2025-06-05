@@ -40,11 +40,13 @@ def demo3():
 def demo4():
     src = TemplateMatchingLocalizationSource(field.spring_2025)
     fac = 0.1
-    xoff = 0.2
+    xoff = 0.7
     yoff = 0
     tpl = _ImageG8(int(src._field_img._width * fac), int(src._field_img._height * fac))
+    show(src._field_img)
     tpl.draw(lambda x, y: src._field_img.get_interp(x * fac + xoff, y * fac + yoff))
-    match = src._field_img.template_match(tpl)
+    show(tpl)
+    match = src._field_img.template_match(tpl, 8)
     show(match)
 
 if __name__ == '__main__':

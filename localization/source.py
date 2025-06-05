@@ -149,19 +149,46 @@ class _ImageG8:
                 for chunk in pool.starmap(type(self)._draw_chunk, [to_args(i) for i in range(num_threads)]):
                     self._data.extend(chunk)
 
-    def template_match(self, img):
-        result = _ImageG8(self._width - img._width, self._height - img._height)
-        img_px = img._width * img._height
-        for ay in range(result._height):
-            for ax in range(result._width):
-                err = 0
-                for by in range(img._height):
-                    for bx in range(img._width):
-                        a = self._data[self._index(ax + bx, ay + by)]
-                        b = img._data[img._index(bx, by)]
-                        # Use ceil so 0 error always means exact match
-                        err += math.ceil(abs(a - b) / 2)
-                result._data[result._index(ax, ay)] = math.ceil(err / img_px)
+    def _template_match_chunk(self, template, result, start, end):
+        result_width = self._width - template._width
+        result_height = self._height - template._height
+        template_px = template._width * template._height
+        for i in range(start, end):
+            ay = i // result_width
+            ax = i % result_width
+            err = 0
+            for by in range(template._height):
+                for bx in range(template._width):
+                    a = self._data[self._index(ax + bx, ay + by)]
+                    b = template._data[template._index(bx, by)]
+                    err += abs(a - b)
+            # Use ceil so 0 error always means exact match
+            result[i - start] = math.ceil(
+                -255 * (math.exp(-err / 2 / template_px / 64) - 1)
+            )
+        return result
+
+    def template_match(self, template, num_threads=1):
+        result_width = self._width - template._width
+        result_height = self._height - template._height
+        result = _ImageG8(result_width, result_height)
+        total_px = result_width * result_height
+        if num_threads == 1:
+            self._template_match_chunk(template, result._data, 0, total_px)
+        else:
+            result._data = array('B')
+            px_per_chunk = total_px // num_threads
+            last_px_per_chunk = total_px - (num_threads - 1) * px_per_chunk
+            def to_args(i):
+                is_last_chunk = i == num_threads - 1
+                num_px = last_px_per_chunk if is_last_chunk else px_per_chunk
+                buf = array('B', [0] * num_px)
+                start = px_per_chunk * i
+                end = total_px if is_last_chunk else start + px_per_chunk
+                return (self, template, buf, start, end)
+            with Pool(num_threads) as pool:
+                for chunk in pool.starmap(type(self)._template_match_chunk, [to_args(i) for i in range(num_threads)]):
+                    result._data.extend(chunk)
         return result
 
     def _convolve_chunk(self, kernel, result, start, end):
@@ -234,8 +261,8 @@ class _ImageG8:
 
 class TemplateMatchingLocalizationSource(AbstractStaticObstacleLocalizationSource):
     DETECTION_LIFETIME = 1
-    PX_PER_M = 100
-    FIELD_OUTLINE_RADIUS_PX = 10
+    PX_PER_M = 50
+    FIELD_OUTLINE_RADIUS_PX = 4
     MAX_DETECTION_DIST_CM = 10
     DETECTION_RADIUS_CM = 5
     FIELD_DRAW_THREADS = 8
