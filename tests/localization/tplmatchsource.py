@@ -16,9 +16,9 @@ def show(img: _ImageG8):
     img = tk.PhotoImage(data=data)
     _hold.add(img)
     tk.Label(root, image=img).pack(side='bottom', fill='both', expand='yes')
+    root.bind('<Key>', lambda e: root.destroy())
     try:
         root.mainloop()
-        pass
     except KeyboardInterrupt:
         _hold.discard(img)
 

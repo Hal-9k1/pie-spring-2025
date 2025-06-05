@@ -152,17 +152,16 @@ class _ImageG8:
     def template_match(self, img):
         result = _ImageG8(self._width - img._width, self._height - img._height)
         img_px = img._width * img._height
-        for ay in range(self._height - img._height):
-            for ax in range(self._width - img._width):
+        for ay in range(result._height):
+            for ax in range(result._width):
+                err = 0
                 for by in range(img._height):
-                    asi = self._index(ax, ay + by)
-                    aei = self._index(ax + img._width, ay + by)
-                    ar = self._data[asi:aei]
-                    br = img._data[img._index(0, by):img._index(0, by + 1)]
-                    # Use ceil so 0 error always means exact match
-                    result._data[result._index(ax, ay)] = int(
-                        math.ceil(sum([math.ceil(abs(a - b) / 2) for a, b in zip(ar, br)]) / img_px)
-                    )
+                    for bx in range(img._width):
+                        a = self._data[self._index(ax + bx, ay + by)]
+                        b = img._data[img._index(bx, by)]
+                        # Use ceil so 0 error always means exact match
+                        err += math.ceil(abs(a - b) / 2)
+                result._data[result._index(ax, ay)] = math.ceil(err / img_px)
         return result
 
     def _convolve_chunk(self, kernel, result, start, end):
