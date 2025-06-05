@@ -209,7 +209,7 @@ class _ImageG8:
         return result
 
     def convolve(self, kernel, num_threads=1):
-        result = _ImageG8(self._width, self._height)
+        result = type(self)(self._width, self._height)
         total_px = self._width * self._height
         if num_threads == 1:
             self._convolve_chunk(kernel, result._data, 0, total_px)
@@ -234,6 +234,25 @@ class _ImageG8:
             _ImageG8(size, size, [int(128 / size**2 + 128)] * size**2),
             num_threads=num_threads
         )
+
+    def gaussian_blur(self, size, num_threads=1):
+        kernel = type(self)(size, size)
+        kernel.draw(
+            type(self)._gaussian_kernel_draw_kernel,
+            num_threads=num_threads,
+            userdata=size
+        )
+        return self.convolve(
+            kernel,
+            num_threads=num_threads
+        )
+
+    def _gaussian_kernel_draw_kernel(x, y, userdata):
+        size = userdata
+        x = size * (x - 0.5)
+        y = size * (y - 0.5)
+        s = size / 4
+        return 128 * (1 + math.exp(-(x*x + y*y) / (2 * s * s)) / (2 * math.pi * s * s))
 
     def rotate(self, angle, anchor, fill, num_threads=1):
         result = _ImageG8(self._width, self._height)
@@ -267,6 +286,7 @@ class TemplateMatchingLocalizationSource(AbstractStaticObstacleLocalizationSourc
     DETECTION_RADIUS_CM = 5
     FIELD_DRAW_THREADS = 8
     DETECTIONS_DRAW_THREADS = 8
+    ROTATION_VARIANTS = 16
 
     def __init__(self, field, field_img=None):
         super().__init__(self.DETECTION_LIFETIME)
@@ -283,6 +303,9 @@ class TemplateMatchingLocalizationSource(AbstractStaticObstacleLocalizationSourc
                 userdata=(self, obstacles)
             )
 
+    def get_field_image(self):
+        return self._field_img
+
     def _localize_from_detections(self, dets):
         template = _ImageG8(2 * self.MAX_DETECTION_DIST_CM, self.MAX_DETECTION_DIST_CM)
         points = [
@@ -297,7 +320,15 @@ class TemplateMatchingLocalizationSource(AbstractStaticObstacleLocalizationSourc
             num_threads=self.DETECTIONS_DRAW_THREADS,
             userdata=(self, points)
         )
-        # match many rotations of template against self._field_img
+        match_results = [
+            self._field_img.template_match(
+                template.rotate(
+                    2 * math.pi * i / self.ROTATION_VARIANTS,
+                )
+            )
+            for i in range(self.ROTATION_VARIANTS)
+        ]
+        # get localization data from match_results
 
     def _draw_field_kernel(x, y, userdata):
         self, obstacles = userdata

@@ -48,6 +48,8 @@ def demo4():
     show(tpl)
     match = src._field_img.template_match(tpl, 8)
     show(match)
+    match_blur = match.gaussian_blur(10, 8)
+    show(match_blur)
 
 if __name__ == '__main__':
     demo4()
