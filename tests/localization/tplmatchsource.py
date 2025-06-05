@@ -26,7 +26,7 @@ def demo1():
     i = _ImageG8(400, 200)
     div = 0.1
     i.draw(lambda x, y: int((x // div + y // div) % 2 * 255))
-    i = i.convolve(_ImageG8(10, 10, [int(128 / 100 + 128)] * 100))
+    i = i.square_blur(10)
     show(i)
 
 def demo2():
@@ -37,5 +37,15 @@ def demo3():
     src = TemplateMatchingLocalizationSource(field.spring_2025)
     show(src._field_img.rotate(pi / 4, Vec2(0, 0), 0, 8))
 
+def demo4():
+    src = TemplateMatchingLocalizationSource(field.spring_2025)
+    fac = 0.1
+    xoff = 0.2
+    yoff = 0
+    tpl = _ImageG8(int(src._field_img._width * fac), int(src._field_img._height * fac))
+    tpl.draw(lambda x, y: src._field_img.get_interp(x * fac + xoff, y * fac + yoff))
+    match = src._field_img.template_match(tpl)
+    show(match)
+
 if __name__ == '__main__':
-    demo3()
+    demo4()
