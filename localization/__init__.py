@@ -9,35 +9,31 @@ import time
 
 class LocalizationData(ABC):
     @abstractmethod
-    def get_position_probability(self, pos):
+    def get_position_probability(self, tfm):
         raise NotImplementedError
 
     @abstractmethod
-    def get_position_probability_dx(self, pos):
+    def get_position_probability_dx(self, tfm):
         raise NotImplementedError
 
     @abstractmethod
-    def get_position_probability_dy(self, pos):
+    def get_position_probability_dy(self, tfm):
         raise NotImplementedError
 
     @abstractmethod
-    def get_position_probability_dx_gradient(self, pos):
+    def get_position_probability_dtheta(self, tfm):
         raise NotImplementedError
 
     @abstractmethod
-    def get_position_probability_dy_gradient(self, pos):
+    def get_position_probability_dx_gradient(self, tfm):
         raise NotImplementedError
 
     @abstractmethod
-    def get_rotation_probability(self, rot):
+    def get_position_probability_dy_gradient(self, tfm):
         raise NotImplementedError
 
     @abstractmethod
-    def get_rotation_probability_dx(self, rot):
-        raise NotImplementedError
-
-    @abstractmethod
-    def get_rotation_probability_dx2(self, rot):
+    def get_position_probability_dtheta_gradient(self, tfm):
         raise NotImplementedError
 
 
