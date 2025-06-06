@@ -1,7 +1,8 @@
 import tkinter as tk
-from localization.source import _ImageG8
+from localization.source.templatematch import _ImageG8
 import field
-from localization.source import TemplateMatchingLocalizationSource
+from localization.source.templatematch import TemplateMatchingLocalizationSource
+from task.sensory import SensorTurretTask
 from math import pi
 from matrix import Vec2
 
@@ -51,5 +52,24 @@ def demo4():
     match_blur = match.gaussian_blur(10, 8)
     show(match_blur)
 
+def demo5():
+    src = TemplateMatchingLocalizationSource(field.spring_2025, field_img=None)
+    show(src._localize_from_detections([
+        SensorTurretTask(i * pi / 16, dist)
+        for i, dist in zip(range(11), [
+            16,
+            11.67,
+            9.47,
+            8.23,
+            7.54,
+            7.21,
+            7.17,
+            7.41,
+            8,
+            9.06,
+            10.92
+        ])
+    ]))
+
 if __name__ == '__main__':
-    demo4()
+    demo5()

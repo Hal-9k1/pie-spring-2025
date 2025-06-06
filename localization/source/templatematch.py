@@ -1,97 +1,10 @@
-from abc import ABC
-from abc import abstractmethod
+from localization.source import AbstractStaticObstacleLocalizationSource
 from array import array
-from layer import Layer
-from localization import LocalizationSource
-from localization import LocalizationData
-from localization.data import SqFalloffLocalizationData
-from task.sensory import LocalizationTask
-from task.sensory import SensorTurretTask
 from matrix import Mat2
-from matrix import Mat3
 from matrix import Vec2
 from multiprocessing import Pool
+from units import convert
 import math
-
-
-class AntiTeleportationLocalizationSource(Layer, LocalizationSource):
-    FIN_DIFF_EPSILON = 0.0001
-    POSITION_PRECISION = 1
-    ROTATION_PRECISION = 1
-    ACCURACY = 0.7
-
-    def on_start(self, init_transform):
-        self._data = SqFalloffLocalizationData(
-            self.FIN_DIFF_EPSILON,
-            init_transform,
-            self.ACCURACY,
-            self.POSITION_PRECISION,
-            self.ROTATION_PRECISION
-        )
-
-    def get_input_tasks(self):
-        return {LocalizationTask}
-
-    def get_output_tasks(self):
-        return set()
-
-    def process(self, ctx):
-        ctx.request_task()
-
-    def accept_task(self, task):
-        self._data = SqFalloffLocalizationData(
-            self.FIN_DIFF_EPSILON,
-            task.get_robot_field_transform(),
-            self.ACCURACY,
-            self.POSITION_PRECISION,
-            self.ROTATION_PRECISION
-        )
-
-    def has_data(self):
-        return True
-
-    def collect_data(self):
-        return self._data
-
-
-class AbstractStaticObstacleLocalizationSource(Layer, LocalizationSource):
-    def __init__(self, detection_lifetime):
-        self._detections = []
-        self._new_tasks = []
-        self._lifetime = detection_lifetime
-
-    def get_input_tasks(self):
-        return {SensorTurretTask}
-
-    def get_output_tasks(self):
-        return set()
-
-    def process(self, ctx):
-        for t in self._new_tasks:
-            ctx.complete_task(t)
-        self._new_tasks.clear()
-        ctx.request_task()
-        while self._detections:
-            head = self._detections[0]
-            if time.time() - head[0] > self._lifetime:
-                del self._detections[0]
-            else:
-                break
-
-    def accept_task(self, task):
-        self._detections.append((time.time(), task))
-        self._new_tasks.append(task)
-
-    def has_data(self):
-        return True
-
-    def collect_data(self):
-        dets = [d[1] for d in self._detections]
-        return self._localize_from_detections(dets)
-
-    @abstractmethod
-    def _localize_from_detections(self, dets: list[LocalizationTask]) -> LocalizationData:
-        raise NotImplementedError
 
 
 class _ImageG8:
@@ -281,9 +194,9 @@ class _ImageG8:
 class TemplateMatchingLocalizationSource(AbstractStaticObstacleLocalizationSource):
     DETECTION_LIFETIME = 1
     PX_PER_M = 50
-    FIELD_OUTLINE_RADIUS_PX = 4
-    MAX_DETECTION_DIST_CM = 10
-    DETECTION_RADIUS_CM = 5
+    FIELD_OUTLINE_RADIUS_CM = 8
+    MAX_DETECTION_DIST_CM = 100
+    DETECTION_RADIUS_CM = 2
     FIELD_DRAW_THREADS = 8
     DETECTIONS_DRAW_THREADS = 8
     ROTATION_VARIANTS = 16
@@ -292,6 +205,8 @@ class TemplateMatchingLocalizationSource(AbstractStaticObstacleLocalizationSourc
         super().__init__(self.DETECTION_LIFETIME)
         self._size_m = field.get_size()
         self._size_px = math.floor(self._size_m * self.PX_PER_M)
+        self.FIELD_OUTLINE_RADIUS_PX = self.FIELD_OUTLINE_RADIUS_CM / 100 * self.PX_PER_M
+        self.DETECTION_RADIUS_PX = self.DETECTION_RADIUS_CM / 100 * self.PX_PER_M
         if field_img:
             self._field_img = field_img
         else:
@@ -307,12 +222,13 @@ class TemplateMatchingLocalizationSource(AbstractStaticObstacleLocalizationSourc
         return self._field_img
 
     def _localize_from_detections(self, dets):
-        template = _ImageG8(2 * self.MAX_DETECTION_DIST_CM, self.MAX_DETECTION_DIST_CM)
+        detection_dist_px = int(self.MAX_DETECTION_DIST_CM / 100 * self.PX_PER_M)
+        template = _ImageG8(2 * detection_dist_px, detection_dist_px)
         points = [
-            Vec2(
+            convert(Vec2(
                 det.get_distance() * (1 + math.cos(det.get_angle())),
                 det.get_distance() * math.sin(det.get_angle())
-            )
+            ), 'cm', 'm')
             for det in dets if det.get_distance() < self.MAX_DETECTION_DIST_CM
         ]
         template.draw(
@@ -320,6 +236,7 @@ class TemplateMatchingLocalizationSource(AbstractStaticObstacleLocalizationSourc
             num_threads=self.DETECTIONS_DRAW_THREADS,
             userdata=(self, points)
         )
+        return template
         match_results = [
             self._field_img.template_match(
                 template.rotate(
@@ -346,52 +263,10 @@ class TemplateMatchingLocalizationSource(AbstractStaticObstacleLocalizationSourc
 
     def _draw_detections_kernel(x, y, userdata):
         self, points = userdata
-        sum_abs_dist_px = sum([
-            (point - Vec2(x * self._size_m.get_x(), y * self._size_m.get_y()) + self._field_tl).len()
+        radius_m = self.DETECTION_RADIUS_PX / self.PX_PER_M
+        sum_abs_dist = sum([
+            (point - Vec2(x * self._size_m.get_x(), y * self._size_m.get_y())).len()
             for point in points
-        ]) * self.PX_PER_M
-        norm_dist = min(self.DETECTION_RADIUS_PX, sub_abs_dist_px) / self.DETECTION_RADIUS_PX
+        ])
+        norm_dist = max(0, min(1, sum_abs_dist / radius_m - len(points) + 1))
         return (1 - norm_dist) * 255
-
-
-class EncoderLocalizationSource(LocalizationSource):
-    FIN_DIFF_EPSILON = 0.0001
-    POSITION_PRECISION = 1
-    ROTATION_PRECISION = 1
-    ACCURACY = 1
-
-    def __init__(self, encoder_drive_system):
-        self._drive = encoder_drive_system
-        self._state = None
-
-    def on_start(self, start_tfm):
-        self._tfm = start_tfm
-
-    def on_update(self):
-        new_state = self._drive.record_state()
-        if self._state:
-            delta = self._drive.get_state_delta(self._state, new_state)
-            self._tfm = self._tfm.mul(delta)
-        self._state = new_state
-
-    def has_data(self):
-        return self._state != None
-
-    def collect_data(self):
-        return SqFalloffLocalizationData(
-            self.FIN_DIFF_EPSILON,
-            self._tfm,
-            self.ACCURACY,
-            self.POSITION_PRECISION,
-            self.ROTATION_PRECISION
-        )
-
-
-class EncoderDriveSystem(ABC):
-    @abstractmethod
-    def record_state(self) -> object:
-        raise NotImplementedError
-
-    @abstractmethod
-    def get_state_delta(self, old_state: object, new_state: object) -> Mat3:
-        raise NotImplementedError
