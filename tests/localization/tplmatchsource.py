@@ -1,5 +1,5 @@
 import tkinter as tk
-from localization.source.templatematch import _ImageG8
+from localization.source.templatematch import ImageG8
 import field
 from localization.source.templatematch import TemplateMatchingLocalizationSource
 from task.sensory import SensorTurretTask
@@ -9,7 +9,7 @@ from matrix import Vec2
 
 _hold = set()
 
-def show(img: _ImageG8):
+def show(img: ImageG8):
     root = tk.Tk()
     data = f'P5\n{img._width}\n{img._height}\n255\n'.encode('ascii') + img._data.tobytes()
     #with open('out.pgm', 'w') as f:
@@ -24,7 +24,7 @@ def show(img: _ImageG8):
         _hold.discard(img)
 
 def demo1():
-    i = _ImageG8(400, 200)
+    i = ImageG8(400, 200)
     div = 0.1
     i.draw(lambda x, y: int((x // div + y // div) % 2 * 255))
     i = i.square_blur(10)
@@ -43,7 +43,7 @@ def demo4():
     fac = 0.1
     xoff = 0.7
     yoff = 0
-    tpl = _ImageG8(int(src._field_img._width * fac), int(src._field_img._height * fac))
+    tpl = ImageG8(int(src._field_img._width * fac), int(src._field_img._height * fac))
     show(src._field_img)
     tpl.draw(lambda x, y: src._field_img.get_interp(x * fac + xoff, y * fac + yoff))
     show(tpl)

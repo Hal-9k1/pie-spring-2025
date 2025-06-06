@@ -7,7 +7,7 @@ from units import convert
 import math
 
 
-class _ImageG8:
+class ImageG8:
     def __init__(self, width, height, data=None):
         self._width = width
         self._height = height
@@ -84,7 +84,7 @@ class _ImageG8:
     def template_match(self, template, num_threads=1):
         result_width = self._width - template._width
         result_height = self._height - template._height
-        result = _ImageG8(result_width, result_height)
+        result = ImageG8(result_width, result_height)
         total_px = result_width * result_height
         if num_threads == 1:
             self._template_match_chunk(template, result._data, 0, total_px)
@@ -144,7 +144,7 @@ class _ImageG8:
 
     def square_blur(self, size, num_threads=1):
         return self.convolve(
-            _ImageG8(size, size, [int(128 / size**2 + 128)] * size**2),
+            ImageG8(size, size, [int(128 / size**2 + 128)] * size**2),
             num_threads=num_threads
         )
 
@@ -168,7 +168,7 @@ class _ImageG8:
         return 128 * (1 + math.exp(-(x*x + y*y) / (2 * s * s)) / (2 * math.pi * s * s))
 
     def rotate(self, angle, anchor, fill, num_threads=1):
-        result = _ImageG8(self._width, self._height)
+        result = ImageG8(self._width, self._height)
         tfm = Mat2.from_angle(-angle)
         anchor_norm = Vec2(anchor.get_x() / self._width, anchor.get_y() / self._height)
         result.draw(
@@ -210,7 +210,7 @@ class TemplateMatchingLocalizationSource(AbstractStaticObstacleLocalizationSourc
         if field_img:
             self._field_img = field_img
         else:
-            self._field_img = _ImageG8(self._size_px.get_x(), self._size_px.get_y())
+            self._field_img = ImageG8(self._size_px.get_x(), self._size_px.get_y())
             obstacles = field.get_pathfinding_obstacles()
             self._field_img.draw(
                 type(self)._draw_field_kernel,
@@ -223,7 +223,7 @@ class TemplateMatchingLocalizationSource(AbstractStaticObstacleLocalizationSourc
 
     def _localize_from_detections(self, dets):
         detection_dist_px = int(self.MAX_DETECTION_DIST_CM / 100 * self.PX_PER_M)
-        template = _ImageG8(2 * detection_dist_px, detection_dist_px)
+        template = ImageG8(2 * detection_dist_px, detection_dist_px)
         points = [
             convert(Vec2(
                 det.get_distance() * (1 + math.cos(det.get_angle())),
