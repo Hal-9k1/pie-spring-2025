@@ -53,7 +53,8 @@ def demo4():
     show(match_blur)
 
 def demo5():
-    src = TemplateMatchingLocalizationSource(field.spring_2025, field_img=None)
+    src = TemplateMatchingLocalizationSource(field.spring_2025, field_img=True)
+    show(src._localize_from_detections([SensorTurretTask(pi / 2, 0.05)]))
     show(src._localize_from_detections([
         SensorTurretTask(i * pi / 16, dist / 100)
         for i, dist in zip(range(12), [
