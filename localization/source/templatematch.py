@@ -62,7 +62,7 @@ class ImageG8:
                 for chunk in pool.starmap(type(self)._draw_chunk, [to_args(i) for i in range(num_threads)]):
                     self._data.extend(chunk)
 
-    def _template_match_chunk(self, template, result, start, end):
+    def _template_match_chunk(self, template, mask, result, start, end):
         result_width = self._width - template._width
         result_height = self._height - template._height
         template_px = template._width * template._height
@@ -74,20 +74,21 @@ class ImageG8:
                 for bx in range(template._width):
                     a = self._data[self._index(ax + bx, ay + by)]
                     b = template._data[template._index(bx, by)]
-                    err += abs(a - b)
+                    mask_fac = mask._data[mask._index(bx, by)] if mask else 1
+                    err += abs(a - b) * mask_fac
             # Use ceil so 0 error always means exact match
             result[i - start] = math.ceil(
                 -255 * (math.exp(-err / 2 / template_px / 64) - 1)
             )
         return result
 
-    def template_match(self, template, num_threads=1):
+    def template_match(self, template, num_threads=1, mask=None):
         result_width = self._width - template._width
         result_height = self._height - template._height
         result = ImageG8(result_width, result_height)
         total_px = result_width * result_height
         if num_threads == 1:
-            self._template_match_chunk(template, result._data, 0, total_px)
+            self._template_match_chunk(template, mask, result._data, 0, total_px)
         else:
             result._data = array('B')
             px_per_chunk = total_px // num_threads
@@ -98,7 +99,7 @@ class ImageG8:
                 buf = array('B', [0] * num_px)
                 start = px_per_chunk * i
                 end = total_px if is_last_chunk else start + px_per_chunk
-                return (self, template, buf, start, end)
+                return (self, template, mask, buf, start, end)
             with Pool(num_threads) as pool:
                 for chunk in pool.starmap(type(self)._template_match_chunk, [to_args(i) for i in range(num_threads)]):
                     result._data.extend(chunk)
@@ -193,10 +194,10 @@ class ImageG8:
 
 class TemplateMatchingLocalizationSource(AbstractStaticObstacleLocalizationSource):
     DETECTION_LIFETIME = 1
-    PX_PER_M = 50
-    FIELD_OUTLINE_RADIUS_CM = 8
-    MAX_DETECTION_DIST_CM = 100
-    DETECTION_RADIUS_CM = 2
+    PX_PER_M = 500
+    FIELD_OUTLINE_RADIUS_PX = 4
+    MAX_DETECTION_DIST_M = 0.1
+    DETECTION_RADIUS_PX = 4
     FIELD_DRAW_THREADS = 8
     DETECTIONS_DRAW_THREADS = 8
     ROTATION_VARIANTS = 16
@@ -205,8 +206,6 @@ class TemplateMatchingLocalizationSource(AbstractStaticObstacleLocalizationSourc
         super().__init__(self.DETECTION_LIFETIME)
         self._size_m = field.get_size()
         self._size_px = math.floor(self._size_m * self.PX_PER_M)
-        self.FIELD_OUTLINE_RADIUS_PX = self.FIELD_OUTLINE_RADIUS_CM / 100 * self.PX_PER_M
-        self.DETECTION_RADIUS_PX = self.DETECTION_RADIUS_CM / 100 * self.PX_PER_M
         if field_img:
             self._field_img = field_img
         else:
@@ -222,19 +221,19 @@ class TemplateMatchingLocalizationSource(AbstractStaticObstacleLocalizationSourc
         return self._field_img
 
     def _localize_from_detections(self, dets):
-        detection_dist_px = int(self.MAX_DETECTION_DIST_CM / 100 * self.PX_PER_M)
+        detection_dist_px = int(self.MAX_DETECTION_DIST_M * self.PX_PER_M)
         template = ImageG8(2 * detection_dist_px, detection_dist_px)
         points = [
-            convert(Vec2(
-                det.get_distance() * (1 + math.cos(det.get_angle())),
+            Vec2(
+                det.get_distance() * math.cos(det.get_angle()) + self.MAX_DETECTION_DIST_M,
                 det.get_distance() * math.sin(det.get_angle())
-            ), 'cm', 'm')
-            for det in dets if det.get_distance() < self.MAX_DETECTION_DIST_CM
+            )
+            for det in dets if det.get_distance() < self.MAX_DETECTION_DIST_M
         ]
         template.draw(
             type(self)._draw_detections_kernel,
             num_threads=self.DETECTIONS_DRAW_THREADS,
-            userdata=(self, points)
+            userdata=(self, points, detection_dist_px, self.DETECTION_RADIUS_PX / self.PX_PER_M)
         )
         return template
         match_results = [
@@ -262,11 +261,11 @@ class TemplateMatchingLocalizationSource(AbstractStaticObstacleLocalizationSourc
         return (1 - norm_dist) * 255
 
     def _draw_detections_kernel(x, y, userdata):
-        self, points = userdata
-        radius_m = self.DETECTION_RADIUS_PX / self.PX_PER_M
+        self, points, detection_dist_px, detection_radius_m = userdata
+        frag_pos_m = Vec2(x * detection_dist_px * 2, (1 - y) * detection_dist_px) / self.PX_PER_M
         sum_abs_dist = sum([
-            (point - Vec2(x * self._size_m.get_x(), y * self._size_m.get_y())).len()
+            min(detection_radius_m, (point - frag_pos_m).len())
             for point in points
         ])
-        norm_dist = max(0, min(1, sum_abs_dist / radius_m - len(points) + 1))
+        norm_dist = max(0, min(1, sum_abs_dist / detection_radius_m - len(points) + 1))
         return (1 - norm_dist) * 255

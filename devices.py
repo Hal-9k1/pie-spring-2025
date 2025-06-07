@@ -1,6 +1,7 @@
 from abc import ABC
 from abc import abstractmethod
 from log import Logger
+from units import convert
 import math
 import time
 
@@ -238,4 +239,4 @@ class DistanceSensor(Device):
         return self.get_distance() > self._low_threshold
 
     def get_distance(self):
-        return self._robot.get_value(self._device, "distance")
+        return convert(self._robot.get_value(self._device, "distance"), 'cm', 'm')

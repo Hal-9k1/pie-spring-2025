@@ -2,6 +2,7 @@ from math import acos
 from math import atan2
 from math import cos
 from math import isfinite
+from math import floor
 from math import sin
 from math import sqrt
 from numbers import Number
@@ -263,7 +264,7 @@ class Vec2:
         return self.mul(1 / other)
 
     def __floor__(self):
-        return Vec2(int(self._x // 1), int(self._y // 1))
+        return Vec2(int(floor(self._x)), int(floor(self._y)))
 
     def __eq__(self, other):
         return isinstance(other, Vec2) and self._x == other._x and self._y == other._y

@@ -55,8 +55,8 @@ def demo4():
 def demo5():
     src = TemplateMatchingLocalizationSource(field.spring_2025, field_img=None)
     show(src._localize_from_detections([
-        SensorTurretTask(i * pi / 16, dist)
-        for i, dist in zip(range(11), [
+        SensorTurretTask(i * pi / 16, dist / 100)
+        for i, dist in zip(range(12), [
             16,
             11.67,
             9.47,
@@ -67,7 +67,8 @@ def demo5():
             7.41,
             8,
             9.06,
-            10.92
+            10.92,
+            0
         ])
     ]))
 
