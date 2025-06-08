@@ -257,6 +257,9 @@ class Vec2:
     def __sub__(self, other):
         return self.add(other.mul(-1))
 
+    def __neg__(self):
+        return self.mul(-1)
+
     def __mul__(self, other):
         return self.mul(other)
 

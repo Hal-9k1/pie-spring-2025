@@ -1,6 +1,7 @@
 from localization.source import AbstractStaticObstacleLocalizationSource
 from array import array
 from matrix import Mat2
+from matrix import Mat3
 from matrix import Vec2
 from multiprocessing import Pool
 from units import convert
@@ -48,7 +49,7 @@ class ImageG8:
             result[i - start] = int(res)
         return result
 
-    def draw(self, kernel, num_threads=1, userdata=None):
+    def draw(self, kernel, num_threads=1, process_pool=None, userdata=None):
         total_px = self._width * self._height
         if num_threads == 1:
             self._draw_chunk(kernel, userdata, self._data, 0, total_px)
@@ -63,9 +64,14 @@ class ImageG8:
                 start = px_per_chunk * i
                 end = total_px if is_last_chunk else start + px_per_chunk
                 return (self, kernel, userdata, buf, start, end)
-            with Pool(num_threads) as pool:
-                for chunk in pool.starmap(type(self)._draw_chunk, [to_args(i) for i in range(num_threads)]):
+            args = [to_args(i) for i in range(num_threads)]
+            try:
+                pool = process_pool or Pool(num_threads)
+                for chunk in pool.starmap(type(self)._draw_chunk, args):
                     self._data.extend(chunk)
+            finally:
+                if not process_pool:
+                    pool.terminate()
 
     def _paste_chunk(self, location, image, result, start, end):
         for i in range(start, end):
@@ -79,7 +85,7 @@ class ImageG8:
                     image._data[image._index(x, y)] + self._data[self._index(ax, ay)]
                 )
 
-    def paste(self, location, image, num_threads=1):
+    def paste(self, location, image, num_threads=1, process_pool=None):
         total_px = image._width * image._height
         if num_threads == 1:
             result = array('B', [0] * total_px)
@@ -95,9 +101,14 @@ class ImageG8:
                 start = px_per_chunk * i
                 end = total_px if is_last_chunk else start + px_per_chunk
                 return (self, location, image, buf, start, end)
-            with Pool(num_threads) as pool:
-                for chunk in pool.starmap(type(self)._paste_chunk, [to_args(i) for i in range(num_threads)]):
+            args = [to_args(i) for i in range(num_threads)]
+            try:
+                pool = process_pool or Pool(num_threads)
+                for chunk in pool.starmap(type(self)._paste_chunk, args):
                     result.extend(chunk)
+            finally:
+                if not process_pool:
+                    pool.terminate()
         for row in range(image._height):
             s = self._index(location.get_x(), location.get_y() + row)
             e = self._index(location.get_x() + image._width, location.get_y() + row)
@@ -123,7 +134,7 @@ class ImageG8:
             )
         return result
 
-    def template_match(self, template, num_threads=1, mask=None):
+    def template_match(self, template, num_threads=1, process_pool=None, mask=None):
         result_width = self._width - template._width
         result_height = self._height - template._height
         result = ImageG8(result_width, result_height)
@@ -141,9 +152,14 @@ class ImageG8:
                 start = px_per_chunk * i
                 end = total_px if is_last_chunk else start + px_per_chunk
                 return (self, template, mask, buf, start, end)
-            with Pool(num_threads) as pool:
-                for chunk in pool.starmap(type(self)._template_match_chunk, [to_args(i) for i in range(num_threads)]):
+            args = [to_args(i) for i in range(num_threads)]
+            try:
+                pool = process_pool or Pool(num_threads)
+                for chunk in pool.starmap(type(self)._template_match_chunk, args):
                     result._data.extend(chunk)
+            finally:
+                if not process_pool:
+                    pool.terminate()
         return result
 
     def _convolve_chunk(self, kernel, result, start, end):
@@ -163,7 +179,7 @@ class ImageG8:
             result[i - start] = int(max(0, min(255, v)))
         return result
 
-    def convolve(self, kernel, num_threads=1):
+    def convolve(self, kernel, num_threads=1, process_pool=None):
         result = type(self)(self._width, self._height)
         total_px = self._width * self._height
         if num_threads == 1:
@@ -179,18 +195,24 @@ class ImageG8:
                 start = px_per_chunk * i
                 end = total_px if is_last_chunk else start + px_per_chunk
                 return (self, kernel, buf, start, end)
-            with Pool(num_threads) as pool:
-                for chunk in pool.starmap(type(self)._convolve_chunk, [to_args(i) for i in range(num_threads)]):
+            args = [to_args(i) for i in range(num_threads)]
+            try:
+                pool = process_pool or Pool(num_threads)
+                for chunk in process_pool.starmap(type(self)._convolve_chunk, args):
                     result._data.extend(chunk)
+            finally:
+                if not process_pool:
+                    pool.terminate()
         return result
 
-    def square_blur(self, size, num_threads=1):
+    def square_blur(self, size, num_threads=1, process_pool=None):
         return self.convolve(
             ImageG8(size, size, [int(128 / size**2 + 128)] * size**2),
-            num_threads=num_threads
+            num_threads=num_threads,
+            process_pool=process_pool
         )
 
-    def gaussian_blur(self, size, num_threads=1, cache_kernel=True):
+    def gaussian_blur(self, size, num_threads=1, process_pool=None, cache_kernel=True):
         if size in self.GAUSSIAN_KERNELS:
             kernel = self.GAUSSIAN_KERNELS[size]
         else:
@@ -198,41 +220,63 @@ class ImageG8:
             kernel.draw(
                 type(self)._gaussian_kernel_draw_kernel,
                 num_threads=num_threads,
-                userdata=size
+                userdata=(size, (size / 4) ** 2)
             )
             if cache_kernel:
                 self.GAUSSIAN_KERNELS[size] = kernel
         return self.convolve(
             kernel,
-            num_threads=num_threads
+            num_threads=num_threads,
+            process_pool=process_pool
         )
 
     def _gaussian_kernel_draw_kernel(x, y, userdata):
-        size = userdata
+        size, s2 = userdata
         x = size * (x - 0.5)
         y = size * (y - 0.5)
-        s = size / 4
-        return 128 * (1 + math.exp(-(x*x + y*y) / (2 * s * s)) / (2 * math.pi * s * s))
+        return 128 * (1 + math.exp(-(x*x + y*y) / (2 * s2)) / (2 * math.pi * s2))
 
-    def rotate(self, angle, anchor, fill, num_threads=1):
-        result = ImageG8(self._width, self._height)
-        tfm = Mat2.from_angle(-angle)
-        anchor_norm = Vec2(anchor.get_x() / self._width, anchor.get_y() / self._height)
+    def rotate(self, angle, anchor, fill, num_threads=1, process_pool=None):
+        tfm = (
+            Mat3.from_transform(Mat2.from_angle(angle), anchor)
+            * Mat3.from_transform(Mat2.identity(), -anchor)
+        )
+        corners = [
+            tfm * Vec2(x * self._width, y * self._height)
+            for x, y in [(0, 0), (1, 0), (0, 1), (1, 1)]
+        ]
+        xs = [corner.get_x() for corner in corners]
+        ys = [corner.get_y() for corner in corners]
+        result_width = max(xs) - min(xs)
+        result_height = max(ys) - min(ys)
+        offset_norm = Vec2(min(xs) / result_width, min(ys) / result_height)
+        print(f'anchor {anchor} offset {offset_norm}')
+        result = ImageG8(int(result_width), int(result_height))
+        reverse_tfm = (
+            Mat3.from_transform(Mat2.from_angle(-angle), anchor)
+            * Mat3.from_transform(Mat2.identity(), -anchor)
+        )
         result.draw(
             type(self)._draw_transformed_kernel,
+            userdata=(self, reverse_tfm, offset_norm, result._width, result._height, fill),
             num_threads=num_threads,
-            userdata=(self, tfm, anchor_norm, fill)
+            process_pool=process_pool
         )
         return result
 
     def _draw_transformed_kernel(x, y, userdata):
-        self, tfm, anchor, fill = userdata
-        pos = tfm * (Vec2(x * self._width, y * self._height) - anchor) + anchor
+        self, tfm, offset_norm, result_width, result_height, fill = userdata
+        x += offset_norm.get_x()
+        y += offset_norm.get_y()
+        pos = tfm * Vec2(x * result_width, y * result_height)
         rx = pos.get_x()
         ry = pos.get_y()
         if rx < 0 or rx >= self._width or ry < 0 or ry >= self._height:
             return fill
-        return self.get_norm(rx / (self._width - 1), ry / (self._height - 1))
+        return self.get_norm(rx / (self._width), ry / (self._height))
+
+    def norm_to_px(self, norm):
+        return Vec2(norm.get_x() * self._width, norm.get_y() * self._height)
 
     def _index(self, x, y):
         return self._width * y + x
@@ -240,39 +284,48 @@ class ImageG8:
 
 class TemplateMatchingLocalizationSource(AbstractStaticObstacleLocalizationSource):
     DETECTION_LIFETIME = 1
-    PX_PER_M = 500
+    PX_PER_M = 50
     FIELD_OUTLINE_RADIUS_PX = 4
     MAX_DETECTION_DIST_M = 0.1
     DETECTION_RADIUS_PX = 4
     FIELD_DRAW_THREADS = 8
     DETECTION_DRAW_THREADS = 8
+    TEMPLATE_MATCH_THREADS = 8
     ROTATION_VARIANTS = 16
 
     def __init__(self, field, field_img=None, detection_img=None):
         super().__init__(self.DETECTION_LIFETIME)
         self._size_m = field.get_size()
         self._size_px = math.floor(self._size_m * self.PX_PER_M)
-        if field_img:
-            self._field_img = field_img
+        if (field_img
+                and field_img[0] == self.PX_PER_M
+                and field_img[1] == self.FIELD_OUTLINE_RADIUS_PX):
+            self._field_img = field_img[2]
         else:
             self._field_img = ImageG8(self._size_px.get_x(), self._size_px.get_y())
             obstacles = field.get_pathfinding_obstacles()
             self._field_img.draw(
                 type(self)._draw_field_kernel,
                 num_threads=self.FIELD_DRAW_THREADS,
-                userdata=(self, obstacles)
+                userdata=(
+                    self,
+                    obstacles,
+                    self.FIELD_OUTLINE_RADIUS_PX / self.PX_PER_M,
+                    len(obstacles) - 1
+                )
             )
         if detection_img and detection_img[0] == self.DETECTION_RADIUS_PX:
             self._detection_img = detection_img[1]
         else:
-            self._detection_img = ImageG8(self.DETECTION_RADIUS_PX * 2, self.DETECTION_RADIUS_PX * 2)
+            detection_diameter = self.DETECTION_RADIUS_PX * 2
+            self._detection_img = ImageG8(detection_diameter, detection_diameter)
             self._detection_img.draw(
                 type(self)._draw_detection_kernel,
                 num_threads=self.DETECTION_DRAW_THREADS
             )
 
     def get_field_image(self):
-        return self._field_img
+        return (self.PX_PER_M, self.FIELD_OUTLINE_RADIUS_PX, self._field_img)
 
     def get_detection_image(self):
         return (self.DETECTION_RADIUS_PX, self._detection_img)
@@ -288,25 +341,34 @@ class TemplateMatchingLocalizationSource(AbstractStaticObstacleLocalizationSourc
             for det in dets if det.get_distance() < self.MAX_DETECTION_DIST_M
         ]
         detection_rr = Vec2(self.DETECTION_RADIUS_PX, self.DETECTION_RADIUS_PX)
-        for point in points:
-            template.paste(
-                math.floor(point * self.PX_PER_M) - detection_rr,
-                self._detection_img
-            )
-        return template
-        match_results = [
-            self._field_img.template_match(
-                template.rotate(
-                    2 * math.pi * i / self.ROTATION_VARIANTS,
+        with Pool(self.TEMPLATE_MATCH_THREADS):
+            for point in points:
+                template.paste(
+                    math.floor(point * self.PX_PER_M) - detection_rr,
+                    self._detection_img,
+                    num_threads=self.TEMPLATE_MATCH_THREADS,
+                    process_pool=pool
                 )
-            )
-            for i in range(self.ROTATION_VARIANTS)
-        ]
+            for i in range(self.ROTATION_VARIANTS):
+                angle = 2 * math.pi * i / self.ROTATION_VARIANTS
+                rotated = template.rotate(
+                    angle,
+                    Vec2(detection_dist_px, detection_dist_px),
+                    0,
+                    num_threads=self.TEMPLATE_MATCH_THREADS,
+                    process_pool=pool
+                )
+                match_results.append(self._field_img.template_match(
+                    rotated,
+                    mask=rotated,
+                    num_threads=self.TEMPLATE_MATCH_THREADS,
+                    process_pool=pool
+                ))
         # get localization data from match_results
+        return match_results
 
     def _draw_field_kernel(x, y, userdata):
-        self, obstacles = userdata
-        radius_m = self.FIELD_OUTLINE_RADIUS_PX / self.PX_PER_M
+        self, obstacles, radius_m, obstacles_len_minus_one = userdata
         point = Vec2(x * self._size_m.get_x(), y * self._size_m.get_y())
         sum_abs_dist = sum([
             min(
@@ -315,7 +377,7 @@ class TemplateMatchingLocalizationSource(AbstractStaticObstacleLocalizationSourc
             )
             for o in obstacles
         ])
-        norm_dist = max(0, min(1, sum_abs_dist / radius_m - len(obstacles) + 1))
+        norm_dist = max(0, min(1, sum_abs_dist / radius_m - obstacles_len_minus_one))
         return (1 - norm_dist) * 255
 
     def _draw_detection_kernel(x, y):

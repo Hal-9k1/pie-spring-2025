@@ -36,7 +36,7 @@ def demo2():
 
 def demo3():
     src = TemplateMatchingLocalizationSource(field.spring_2025)
-    show(src._field_img.rotate(pi / 4, Vec2(0, 0), 0, 8))
+    show(src._field_img.rotate(3 * pi / 4, Vec2(0, 0), 0, 8))
 
 def demo4():
     src = TemplateMatchingLocalizationSource(field.spring_2025)
@@ -53,9 +53,9 @@ def demo4():
     show(match_blur)
 
 def demo5():
-    src = TemplateMatchingLocalizationSource(field.spring_2025, field_img=True)
-    show(src._localize_from_detections([SensorTurretTask(pi / 2, 0.05)]))
-    show(src._localize_from_detections([
+    src = TemplateMatchingLocalizationSource(field.spring_2025)
+    show(src._field_img)
+    matches = src._localize_from_detections([
         SensorTurretTask(i * pi / 16, dist / 100)
         for i, dist in zip(range(12), [
             16,
@@ -71,7 +71,9 @@ def demo5():
             10.92,
             0
         ])
-    ]))
+    ])
+    for match in matches:
+        show(match)
 
 if __name__ == '__main__':
-    demo5()
+    demo3()
