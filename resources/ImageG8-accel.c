@@ -225,7 +225,7 @@ static int templateMatchImpl(
   {
     return err;
   }
-  double scale = high != low ? 255 / (high - low) : 1;
+  double scale = high != low ? 255.0 / (high - low) : 1;
   NormalizeInfo normInfo = {
     out.pData,
     pBuf,

@@ -24,6 +24,9 @@ simauto: $(build_name)
 copy: $(build_name)
 	vim -c 'normal ggvG$$"+y' -c ':q' $<
 
+tpltest: resources/ImageG8_accel_c_build.py
+	DISPLAY=:0.0 python -m tests.localization.tplmatchsource
+
 clean:
 	rm -rf Makefile.depends $(build_name) $(resource_builds) encinal-2025-data/
 

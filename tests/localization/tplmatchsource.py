@@ -92,7 +92,7 @@ def demo5():
         show(match)
 
 def demo6():
-    profile.run('template_match()', filename='profilebuild.py')
+    profile.run('template_match()', sort='cumulative')
 
 def demo7():
     template_match()
@@ -127,4 +127,4 @@ def saveconfs():
 
 if __name__ == '__main__':
     #saveconfs()
-    demo5()
+    demo6()

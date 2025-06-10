@@ -1,10 +1,11 @@
-from localization.source import AbstractStaticObstacleLocalizationSource
-from resources.ImageG8_accel_c_build import ImageG8_accel_c
 from array import array
+from contextlib import nullcontext
+from localization.source import AbstractStaticObstacleLocalizationSource
 from matrix import Mat2
 from matrix import Mat3
 from matrix import Vec2
 from multiprocessing import Pool
+from resources.ImageG8_accel_c_build import ImageG8_accel_c
 from units import convert
 import ctypes
 import math
@@ -38,7 +39,7 @@ class ImageG8:
                 os.makedirs(os.path.dirname(src_fn), exist_ok=True)
                 with open(src_fn, 'x') as f:
                     f.write(ImageG8_accel_c)
-                subprocess.run(['gcc', '-shared', '-o', cls.ACCEL_LIB_FILENAME, src_fn], check=True)
+                subprocess.run(['gcc', '-shared', '-O0', '-ggdb', '-o', cls.ACCEL_LIB_FILENAME, src_fn], check=True)
             cls.ACCEL_LIB = ctypes.CDLL(cls.ACCEL_LIB_FILENAME)
             cls.ACCEL_LIB.templateMatch.restype = ctypes.c_char_p
             cls.ACCEL_LIB.templateMatch.argtypes = [
@@ -378,7 +379,7 @@ class TemplateMatchingLocalizationSource(AbstractStaticObstacleLocalizationSourc
     DETECTION_RADIUS_PX = 2
     FIELD_DRAW_THREADS = 16
     DETECTION_DRAW_THREADS = 16
-    TEMPLATE_MATCH_THREADS = 16
+    TEMPLATE_MATCH_THREADS = 1
     ROTATION_VARIANTS = 16
 
     def __init__(self, field, field_img=None, detection_img=None):
@@ -436,7 +437,9 @@ class TemplateMatchingLocalizationSource(AbstractStaticObstacleLocalizationSourc
         ]
         detection_rr = Vec2(self.DETECTION_RADIUS_PX, self.DETECTION_RADIUS_PX)
         match_results = []
-        with Pool(self.TEMPLATE_MATCH_THREADS) as pool:
+        with (Pool(self.TEMPLATE_MATCH_THREADS)
+                if self.TEMPLATE_MATCH_THREADS != 1
+                else nullcontext()) as pool:
             for point in points:
                 template.paste(
                     math.floor(point * self.PX_PER_M) - detection_rr,
