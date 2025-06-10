@@ -35,8 +35,8 @@ class FieldRect(FieldObject):
         tl = mat * (self._size * -0.5)
         br = mat * (self._size * 0.5)
         return (
-            Vec2(min(tl.get_x(), br.get_x()), min(tl.get_y(), br.get_y())),
-            Vec2(max(tl.get_x(), br.get_x()), max(tl.get_y(), br.get_y()))
+            Vec2(min(tl.x, br.x), min(tl.y, br.y)),
+            Vec2(max(tl.x, br.x), max(tl.y, br.y))
         )
 
     def to_pathfinding(self):
@@ -68,7 +68,7 @@ class FieldCircle(FieldObject):
 
 class FieldBounds(FieldRect):
     def __init__(self, data):
-        super().__init__((data[0] / 2, data[0], 0), True)
+        super().__init__((data[0] / 2, data[0], 0), is_bounds=True)
                 
 
 class Field:
@@ -96,8 +96,8 @@ class Field:
         br = Vec2(-math.inf, -math.inf)
         for o in self._obstacles:
             otl, obr = o.get_bounding_rect()
-            tl = Vec2(min(tl.get_x(), otl.get_x()), min(tl.get_y(), otl.get_y()))
-            br = Vec2(max(br.get_x(), obr.get_x()), max(br.get_y(), obr.get_y()))
+            tl = Vec2(min(tl.x, otl.x), min(tl.y, otl.y))
+            br = Vec2(max(br.x, obr.x), max(br.y, obr.y))
         return (tl, br) if tl.is_finite() and br.is_finite() else (Vec2.zero(), Vec2.zero())
 
     def get_size(self):

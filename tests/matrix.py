@@ -285,10 +285,10 @@ class TestVec2(TestCase):
         self.assertEqual(Vec2(1, 2), Vec2(1, 2))
 
     def test_x(self):
-        self.assertEqual(Vec2(1, 2).get_x(), 1)
+        self.assertEqual(Vec2(1, 2).x, 1)
 
     def test_y(self):
-        self.assertEqual(Vec2(1, 2).get_y(), 2)
+        self.assertEqual(Vec2(1, 2).y, 2)
 
     def test_add(self):
         self.assertEqual(

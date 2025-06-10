@@ -21,10 +21,10 @@ class RectObstacle(Obstacle):
         br = self._size / 2
         tlp = tl - p
         brp = p - br
-        d = Vec2(max(tlp.get_x(), brp.get_x()), max(tlp.get_y(), brp.get_y()))
-        corner = Vec2(max(0, d.get_x()), max(0, d.get_y()))
-        edge = min(0, max(d.get_x(), d.get_y()))
-        return corner.len() + edge
+        d = Vec2(max(tlp.x, brp.x), max(tlp.y, brp.y))
+        corner = Vec2(max(0, d.x), max(0, d.y))
+        edge = min(0, max(d.x, d.y))
+        return (corner.len() + edge) * (1 if self._invert else -1)
 
 
 class CircleObstacle(Obstacle):
@@ -34,4 +34,3 @@ class CircleObstacle(Obstacle):
 
     def get_distance_to(self, point):
         return (point - self._center).len() - self._radius
-

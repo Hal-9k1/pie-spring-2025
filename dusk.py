@@ -43,8 +43,8 @@ class DuskClient(LoggerBackend):
         packet = bytearray(self._TYPE_POS)
         write_flexible_string(packet, logger_label)
         write_flexible_string(packet, item_label)
-        write_double(packet, position.get_x())
-        write_double(packet, position.get_y())
+        write_double(packet, position.x)
+        write_double(packet, position.y)
         self._queue_packet(packet)
 
     def process_vector(self, logger_label, item_label, attach_label, vector):
@@ -52,8 +52,8 @@ class DuskClient(LoggerBackend):
         write_flexible_string(packet, logger_label)
         write_flexible_string(packet, item_label)
         write_flexible_string(packet, attach_label)
-        write_double(packet, vector.get_x())
-        write_double(packet, vector.get_y())
+        write_double(packet, vector.x)
+        write_double(packet, vector.y)
         self._queue_packet(packet)
 
     def process_transform(self, logger_label, item_label, attach_label, transform):

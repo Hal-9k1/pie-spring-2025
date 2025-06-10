@@ -1,17 +1,23 @@
-import tkinter as tk
 from localization.source.templatematch import ImageG8
-import field
 from localization.source.templatematch import TemplateMatchingLocalizationSource
-from task.sensory import SensorTurretTask
 from math import pi
 from matrix import Vec2
+from multiprocessing import Pool
+from task.sensory import SensorTurretTask
+import field
+import os
+import os.path
+import pickle
+import tkinter as tk
+import math
+import cProfile as profile
 
 
 _hold = set()
 
 def show(img: ImageG8):
     root = tk.Tk()
-    data = f'P5\n{img._width}\n{img._height}\n255\n'.encode('ascii') + img._data.tobytes()
+    data = f'P5\n{img.size.x}\n{img.size.y}\n255\n'.encode('ascii') + img._data.tobytes()
     #with open('out.pgm', 'w') as f:
     #    f.write(data)
     img = tk.PhotoImage(data=data)
@@ -31,7 +37,11 @@ def demo1():
     show(i)
 
 def demo2():
-    src = TemplateMatchingLocalizationSource(field.spring_2025)
+    src = TemplateMatchingLocalizationSource(
+        field.spring_2025,
+        field_img=loadconf('field_img'),
+        detection_img=loadconf('detection_img')
+    )
     show(src._field_img)
 
 def demo3():
@@ -43,7 +53,8 @@ def demo4():
     fac = 0.1
     xoff = 0.7
     yoff = 0
-    tpl = ImageG8(int(src._field_img._width * fac), int(src._field_img._height * fac))
+    size = math.floor(src._field_img._size * fac)
+    tpl = ImageG8(size.x, size.y)
     show(src._field_img)
     tpl.draw(lambda x, y: src._field_img.get_interp(x * fac + xoff, y * fac + yoff))
     show(tpl)
@@ -52,12 +63,16 @@ def demo4():
     match_blur = match.gaussian_blur(10, 8)
     show(match_blur)
 
-def demo5():
-    src = TemplateMatchingLocalizationSource(field.spring_2025)
-    show(src._field_img)
-    matches = src._localize_from_detections([
+def template_match():
+    src = TemplateMatchingLocalizationSource(
+        field.spring_2025,
+        field_img=loadconf('field_img'),
+        detection_img=loadconf('detection_img')
+    )
+    ImageG8.GAUSSIAN_KERNELS = loadconf('gaussian_kernels')
+    return src._localize_from_detections([
         SensorTurretTask(i * pi / 16, dist / 100)
-        for i, dist in zip(range(12), [
+        for i, dist in zip(range(13), [
             16,
             11.67,
             9.47,
@@ -69,11 +84,47 @@ def demo5():
             8,
             9.06,
             10.92,
-            0
         ])
     ])
-    for match in matches:
+
+def demo5():
+    for match in template_match():
         show(match)
 
+def demo6():
+    profile.run('template_match()', filename='profilebuild.py')
+
+def demo7():
+    template_match()
+
+def to_conf_path(name):
+    return f'encinal-2025-cache/{name}.pickle'
+
+def loadconf(name):
+    try:
+        with open(to_conf_path(name), 'rb') as f:
+            return pickle.load(f)
+    except (OSError, pickle.PickleError):
+        return None
+
+def saveconf(name, obj):
+    path = to_conf_path(name)
+    try:
+        os.makedirs(os.path.dirname(path), exist_ok=True)
+        with open(path, 'wb') as f:
+            pickle.dump(obj, f, protocol=-1)
+    except (OSError, pickle.PickleError):
+        pass
+
+def saveconfs():
+    src = TemplateMatchingLocalizationSource(field.spring_2025)
+    with Pool(16) as pool:
+        for i in range(4, 16):
+            ImageG8(1, 1).gaussian_blur(i, num_threads=16, process_pool=pool)
+    saveconf('field_img', src.get_field_image())
+    saveconf('detection_img', src.get_detection_image())
+    saveconf('gaussian_kernels', ImageG8.GAUSSIAN_KERNELS)
+
 if __name__ == '__main__':
-    demo3()
+    #saveconfs()
+    demo5()

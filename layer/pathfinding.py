@@ -183,10 +183,10 @@ class DynwinPathfinder(Layer):
         zl = t.get_lateral()
         zth = t.get_yaw()
         tf = frac * CALCULATE_INTERVAL
-        x0 = self._initial_transform.get_translation().get_x()
-        vx0 = self._initial_velocity.get_translation().get_x()
-        y0 = self._initial_transform.get_translation().get_y()
-        vy0 = self._initial_velocity.get_translation().get_y()
+        x0 = self._initial_transform.get_translation().x
+        vx0 = self._initial_velocity.get_translation().x
+        y0 = self._initial_transform.get_translation().y
+        vy0 = self._initial_velocity.get_translation().y
         vth0 = self._initial_velocity.get_direction().get_angle()
         th0 = self._initial_transform.get_direction().get_angle()
 

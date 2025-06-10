@@ -29,13 +29,13 @@ class Mat2:
             )
         elif isinstance(other, Vec2):
             return Vec2(
-                self._mat[0] * other.get_x() + self._mat[1] * other.get_y(),
-                self._mat[2] * other.get_x() + self._mat[3] * other.get_y()
+                self._mat[0] * other.x + self._mat[1] * other.y,
+                self._mat[2] * other.x + self._mat[3] * other.y
             )
         elif isinstance(other, Number):
             return Mat2(*((e * other) for e in self._mat))
         else:
-            raise ValueError('Invalid multiplicand type.')
+            return NotImplemented
 
     def det(self):
         return self._mat[0] * self._mat[3] - self._mat[1] * self._mat[2]
@@ -97,8 +97,8 @@ class Mat3:
     @classmethod
     def from_transform(self, rot, pos):
         return Mat3(
-            rot.elem(0, 0), rot.elem(1, 0), pos.get_x(),
-            rot.elem(0, 1), rot.elem(1, 1), pos.get_y(),
+            rot.elem(0, 0), rot.elem(1, 0), pos.x,
+            rot.elem(0, 1), rot.elem(1, 1), pos.y,
             0.0, 0.0, 1.0
         )
 
@@ -110,7 +110,7 @@ class Mat3:
                 *(self.row(row).dot(other.col(col)) for row in range(3) for col in range(3))
             )
         elif isinstance(other, Vec2):
-            extended = Vec3(other.get_x(), other.get_y(), 1.0)
+            extended = Vec3(other.x, other.y, 1.0)
             return Vec2(
                  self.row(0).dot(extended),
                  self.row(1).dot(extended)
@@ -120,7 +120,7 @@ class Mat3:
         elif isinstance(other, Number):
             return Mat3(*(x * other for x in self._mat))
         else:
-            raise ValueError('Invalid multiplicand type.')
+            return NotImplemented
 
     def det(self):
          return (
@@ -208,33 +208,37 @@ class Mat3:
 
 class Vec2:
     def __init__(self, x, y):
-        self._x = x
-        self._y = y
+        self.x = x
+        self.y = y
 
     @classmethod
     def zero(cls):
-        return Vec2(0, 0)
-
-    def get_x(self):
-        return self._x
-
-    def get_y(self):
-        return self._y
+        return cls._ZERO
 
     def add(self, other):
-        return Vec2(self._x + other.get_x(), self._y + other.get_y())
+        if isinstance(other, Vec2):
+            return Vec2(self.x + other.x, self.y + other.y)
+        elif isinstance(other, Number):
+            return Vec2(self.x + other, self.y + other)
+        else:
+            return NotImplemented
 
-    def mul(self, scalar):
-        return Vec2(self._x * scalar, self._y * scalar)
+    def mul(self, other):
+        if isinstance(other, Vec2):
+            return Vec2(self.x * other.x, self.y * other.y)
+        elif isinstance(other, Number):
+            return Vec2(self.x * other, self.y * other)
+        else:
+            return NotImplemented
 
     def dot(self, other):
-        return self._x * other.get_x() + self._y * other.get_y()
+        return self.x * other.x + self.y * other.y
 
     def len(self):
         return sqrt(self.dot(self))
 
     def get_angle(self):
-        return atan2(self._y, self._x)
+        return atan2(self.y, self.x)
 
     def unit(self):
         return self.mul(1 / self.len())
@@ -243,19 +247,25 @@ class Vec2:
         return acos(self.unit().dot(other.unit()))
 
     def is_finite(self):
-        return isfinite(self._x) and isfinite(self._y)
+        return isfinite(self.x) and isfinite(self.y)
 
     def proj(self, projectee):
         return self.mul(self.dot(projectee) / self.dot(self))
 
     def get_perpendicular(self):
-        return Vec2(1, -self._x / self._y) if self._y else Vec2(1, 0)
+        return Vec2(1, -self.x / self.y) if self.y else Vec2(1, 0)
 
     def __add__(self, other):
         return self.add(other)
 
+    def __radd__(self, other):
+        return self.add(other)
+
     def __sub__(self, other):
-        return self.add(other.mul(-1))
+        return self.add(-other)
+
+    def __rsub__(self, other):
+        return self.mul(-1).add(other)
 
     def __neg__(self):
         return self.mul(-1)
@@ -263,20 +273,28 @@ class Vec2:
     def __mul__(self, other):
         return self.mul(other)
 
+    def __rmul__(self, other):
+        return self.mul(other)
+
     def __truediv__(self, other):
         return self.mul(1 / other)
 
+    def __rtruediv__(self, other):
+        return Vec2(other / self.x, other / self.y)
+
     def __floor__(self):
-        return Vec2(int(floor(self._x)), int(floor(self._y)))
+        return Vec2(int(floor(self.x)), int(floor(self.y)))
 
     def __eq__(self, other):
-        return isinstance(other, Vec2) and self._x == other._x and self._y == other._y
+        return isinstance(other, Vec2) and self.x == other.x and self.y == other.y
 
     def __hash__(self):
-        return hash((self._x, self._y))
+        return hash((self.x, self.y))
 
     def __repr__(self):
-        return f'Vec2({repr(self._x)}, {repr(self._y)})'
+        return f'Vec2({repr(self.x)}, {repr(self.y)})'
+
+Vec2._ZERO = Vec2(0, 0)
 
 class Vec3:
     def __init__(self, x, y, z):
