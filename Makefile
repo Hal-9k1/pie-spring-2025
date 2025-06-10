@@ -5,6 +5,7 @@ eq = $(and $(findstring $(1),$(2)),$(findstring $(2),$(1)))
 python := python
 build_module := mainbuild
 build_name := $(build_module).py
+resource_builds := $(filter %build.py,$(wildcard resources/*))
 
 .PHONY: all test simauto simteleop simulate copy clean
 all: $(build_name)
@@ -24,7 +25,7 @@ copy: $(build_name)
 	vim -c 'normal ggvG$$"+y' -c ':q' $<
 
 clean:
-	rm -f Makefile.depends $(build_name)
+	rm -f Makefile.depends $(build_name) $(resource_builds)
 
 # Makefile.depends contains the rules to make $(build_name) and remake itself, if it exists
 ifeq (,$(wildcard Makefile.depends))

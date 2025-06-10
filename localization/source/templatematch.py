@@ -1,19 +1,37 @@
 from localization.source import AbstractStaticObstacleLocalizationSource
+from resources.ImageG8_accel_c_build import ImageG8_accel_c
 from array import array
 from matrix import Mat2
 from matrix import Mat3
 from matrix import Vec2
 from multiprocessing import Pool
 from units import convert
+import ctypes
 import math
+import os.path
+import subprocess
 
 
 class ImageG8:
     GAUSSIAN_KERNELS = {}
+    ACCEL_LIB = None
+    ACCEL_LIB_FILENAME = 'encinal-2025-data/ImageG8-accel.so'
 
     def __init__(self, width, height, data=None):
         self.size = Vec2(width, height)
         self._data = array('B', data or [0] * width * height)
+
+    @classmethod
+    def load_accelerator(cls):
+        try:
+            if not os.path.isfile(cls.ACCEL_LIB_FILENAME):
+                src_fn = cls.ACCEL_LIB_FILENAME[:-2] + '.c'
+                with open(src_fn, 'w') as f:
+                    f.write(ImageG8_accel_c)
+                subprocess.run(['gcc', '-shared', '-o', cls.ACCEL_LIB_FILENAME, src_fn], check=True)
+            cls.ACCEL_LIB = ctypes.CDLL(cls.ACCEL_LIB_FILENAME)
+        except Exception as e:
+            raise RuntimeError('Failed to compile or load ImageG8 accelerator.') from e
 
     def get_norm(self, x, y):
         x_norm = max(0, min(self.size.x - 1, x * (self.size.x - 1)))
@@ -118,7 +136,7 @@ class ImageG8:
         result_width = self.size.x - template.size.x
         result_height = self.size.y - template.size.y
         template_px = template.size.x * template.size.y
-        err_scaling_fac = 1 / template_px / 2 / 255 * 2**32
+        err_scaling_fac = 1 / template_px / 2 / 255 / 255 * 2**32
         for i in range(start, end):
             ay = i // result_width
             ax = i % result_width
@@ -127,7 +145,7 @@ class ImageG8:
                 for bx in range(template.size.x):
                     a = self._data[self.size.x * (ay + by) + ax + bx]
                     b = template._data[template.size.x * by + bx]
-                    mask_fac = mask._data[mask.size.x * by + bx] if mask else 1
+                    mask_fac = mask._data[mask.size.x * by + bx] if mask else 255
                     err += abs(a - b) * mask_fac
             # Use ceil so 0 error always means exact match
             result[i - start] = math.ceil(err * err_scaling_fac)
@@ -137,10 +155,21 @@ class ImageG8:
         x, l, r = arg
         return int((x - l) * r)
 
-    def template_match(self, template, num_threads=1, process_pool=None, mask=None):
+    def template_match(
+            self,
+            template,
+            num_threads=1,
+            process_pool=None,
+            mask=None,
+            accelerate=True):
         result_width = self.size.x - template.size.x
         result_height = self.size.y - template.size.y
         result = ImageG8(result_width, result_height)
+        if accelerate:
+            if not self.ACCEL_LIB:
+                type(self).load_accelerator()
+            self.ACCEL_LIB.templateMatch(self, template, mask, result)
+            return result
         total_px = result_width * result_height
         if num_threads == 1:
             intermediate = array('L', [0] * total_px)

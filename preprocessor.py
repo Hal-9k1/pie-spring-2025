@@ -1,5 +1,6 @@
 import sys
 import os
+import os.path
 import textwrap
 
 class ModuleInfo:
@@ -35,6 +36,16 @@ def trim_common_module_segments(module, compare_against):
         else:
             break
     return module[common_strlen:]
+
+def get_resource_files():
+    files = []
+    for path, dirnames, fns in os.walk('resources'):
+        files.extend([
+            (path + os.path.sep, fn)
+            for fn in fns
+            if not fn.startswith('.') and not fn.endswith('.py')
+        ])
+    return files
 
 def process_file(file_path, indent=" " * 4, module_name=None, module_list=None, import_cursor=0,
         auto_detect_entry_points=True):
@@ -237,7 +248,8 @@ if __name__ == "__main__":
             f"If {bd}--dependency-file{es} is specified, the preprocessed file is not output. "
             f"Instead, Makefile rules are written to {ul}depfile{es} that rebuild "
             f"{ul}buildfile{es} (which must be specified in this form of the command) and "
-            f"{ul}depfile{es} when imported files are changed."),
+            f"{ul}depfile{es} when imported files are changed. Some rules specific to the "
+            f"pie-spring-2025 project are generated and included here."),
             file=sys.stderr)
         print(file=sys.stderr)
         print(textwrap.fill(
@@ -278,10 +290,19 @@ if __name__ == "__main__":
             print((f"\tpython {sys.argv[0]} {sys.argv[1]} --dependency-file={dep_fn} "
                 f"--build-file={build_fn}"),
                 file=output_file)
+            for res in get_resource_files():
+                s = ('_' if res[1][0].isdigit() else '') + res[1]
+                built = "".join([
+                    c if c.isidentifier() or c.isdigit() else "_"
+                    for c in s
+                ]) + "_build.py"
+                print(f"{res[0] + built}: {res[0] + res[1]}", file=output_file)
+                print(f"\tprintf '{built[:-3]} = \"\"\"' > $@", file=output_file)
+                print("\tcat $< >> $@", file=output_file)
+                print("\tprintf '\"\"\"' >> $@", file=output_file)
     else:
         try:
             build_file = open(build_fn, "w") if build_fn else sys.stdout
             print(output, file=build_file)
-        except Exception as e:
+        finally:
             build_file.close()
-            raise e
