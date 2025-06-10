@@ -43,7 +43,7 @@ def get_resource_files():
         files.extend([
             (path + os.path.sep, fn)
             for fn in fns
-            if not fn.startswith('.') and not fn.endswith('.py')
+            if not fn.startswith('.') and not fn.endswith('.py') and '__pycache__' not in path
         ])
     return files
 
@@ -295,9 +295,10 @@ if __name__ == "__main__":
                 built = "".join([
                     c if c.isidentifier() or c.isdigit() else "_"
                     for c in s
-                ]) + "_build.py"
-                print(f"{res[0] + built}: {res[0] + res[1]}", file=output_file)
-                print(f"\tprintf '{built[:-3]} = \"\"\"' > $@", file=output_file)
+                ])
+                built_fn = built + "_build.py"
+                print(f"{res[0] + built_fn}: {res[0] + res[1]}", file=output_file)
+                print(f"\tprintf '%s' '{built} = \"\"\"' > $@", file=output_file)
                 print("\tcat $< >> $@", file=output_file)
                 print("\tprintf '\"\"\"' >> $@", file=output_file)
     else:

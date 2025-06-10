@@ -25,7 +25,7 @@ copy: $(build_name)
 	vim -c 'normal ggvG$$"+y' -c ':q' $<
 
 clean:
-	rm -f Makefile.depends $(build_name) $(resource_builds)
+	rm -rf Makefile.depends $(build_name) $(resource_builds) encinal-2025-data/
 
 # Makefile.depends contains the rules to make $(build_name) and remake itself, if it exists
 ifeq (,$(wildcard Makefile.depends))

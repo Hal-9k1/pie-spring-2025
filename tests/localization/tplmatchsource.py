@@ -98,7 +98,7 @@ def demo7():
     template_match()
 
 def to_conf_path(name):
-    return f'encinal-2025-cache/{name}.pickle'
+    return f'encinal-2025-data/{name}.pickle'
 
 def loadconf(name):
     try:

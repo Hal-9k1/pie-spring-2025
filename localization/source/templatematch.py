@@ -8,8 +8,17 @@ from multiprocessing import Pool
 from units import convert
 import ctypes
 import math
+import os
 import os.path
 import subprocess
+
+
+class _Vec2iStruct(ctypes.Structure):
+    _fields_ = [('x', ctypes.c_int), ('y', ctypes.c_int)]
+
+
+class _ImageG8Struct(ctypes.Structure):
+    _fields_ = [('size', _Vec2iStruct), ('pData', ctypes.POINTER(ctypes.c_uint8))]
 
 
 class ImageG8:
@@ -25,13 +34,29 @@ class ImageG8:
     def load_accelerator(cls):
         try:
             if not os.path.isfile(cls.ACCEL_LIB_FILENAME):
-                src_fn = cls.ACCEL_LIB_FILENAME[:-2] + '.c'
-                with open(src_fn, 'w') as f:
+                src_fn = cls.ACCEL_LIB_FILENAME[:-2] + 'c'
+                os.makedirs(os.path.dirname(src_fn), exist_ok=True)
+                with open(src_fn, 'x') as f:
                     f.write(ImageG8_accel_c)
                 subprocess.run(['gcc', '-shared', '-o', cls.ACCEL_LIB_FILENAME, src_fn], check=True)
             cls.ACCEL_LIB = ctypes.CDLL(cls.ACCEL_LIB_FILENAME)
+            cls.ACCEL_LIB.templateMatch.restype = ctypes.c_char_p
+            cls.ACCEL_LIB.templateMatch.argtypes = [
+                _ImageG8Struct, # image
+                _ImageG8Struct, # template
+                ctypes.POINTER(_ImageG8Struct), # pMask
+                _ImageG8Struct, # out
+                ctypes.c_int # threads
+            ]
         except Exception as e:
             raise RuntimeError('Failed to compile or load ImageG8 accelerator.') from e
+
+    @property
+    def _as_parameter_(self):
+        return _ImageG8Struct(
+            _Vec2iStruct(self.size.x, self.size.y),
+            ctypes.pointer(ctypes.c_uint8.from_buffer(self._data))
+        )
 
     def get_norm(self, x, y):
         x_norm = max(0, min(self.size.x - 1, x * (self.size.x - 1)))
@@ -168,7 +193,13 @@ class ImageG8:
         if accelerate:
             if not self.ACCEL_LIB:
                 type(self).load_accelerator()
-            self.ACCEL_LIB.templateMatch(self, template, mask, result)
+            self.ACCEL_LIB.templateMatch(
+                self,
+                template,
+                mask and ctypes.pointer(mask._as_parameter_),
+                result,
+                num_threads
+            )
             return result
         total_px = result_width * result_height
         if num_threads == 1:

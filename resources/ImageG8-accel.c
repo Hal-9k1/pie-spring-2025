@@ -11,12 +11,6 @@ typedef struct
 
 typedef struct
 {
-  double x;
-  double y;
-} Vec2d;
-
-typedef struct
-{
   Vec2i size;
   uint8_t *pData;
 } ImageG8;
