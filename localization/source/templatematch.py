@@ -466,7 +466,8 @@ class TemplateMatchingLocalizationSource(AbstractStaticObstacleLocalizationSourc
                     rotated,
                     mask=rotated,
                     num_threads=self.TEMPLATE_MATCH_THREADS,
-                    process_pool=pool
+                    process_pool=pool,
+                    #accelerate=False
                 ))
         # get localization data from match_results
         return match_results

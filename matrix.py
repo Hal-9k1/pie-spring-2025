@@ -6,6 +6,7 @@ from math import floor
 from math import sin
 from math import sqrt
 from numbers import Number
+import ctypes
 
 class Mat2:
     def __init__(self, m00, m10, m01, m11):
@@ -101,6 +102,10 @@ class Mat3:
             rot.elem(0, 1), rot.elem(1, 1), pos.y,
             0.0, 0.0, 1.0
         )
+
+    @property
+    def _as_parameter_(self):
+        return (ctypes.c_double * 9)(*self._mat)
 
     def mul(self, other):
         if isinstance(other, Mat3):
@@ -207,6 +212,8 @@ class Mat3:
         return f'Mat3({", ".join(repr(e) for e in self._mat)})'
 
 class Vec2:
+    _ZERO = None
+
     def __init__(self, x, y):
         self.x = x
         self.y = y
@@ -296,13 +303,14 @@ class Vec2:
 
 Vec2._ZERO = Vec2(0, 0)
 
+
 class Vec3:
     def __init__(self, x, y, z):
         self._vec = [x, y, z]
 
     @classmethod
     def zero(cls):
-        return Vec3(0, 0, 0)
+        return cls._ZERO
 
     def get_x(self):
         return self._vec[0]
@@ -338,3 +346,5 @@ class Vec3:
 
     def __repr__(self):
         return f'Vec3({", ".join(repr(e) for e in self._vec)})'
+
+Vec3._ZERO = Vec3(0, 0, 0)
