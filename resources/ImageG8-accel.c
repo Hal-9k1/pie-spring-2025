@@ -3,6 +3,11 @@
 #include <stdint.h>
 #include <stdlib.h>
 
+uint64_t getSourceHash()
+{
+  return SOURCE_HASH;
+}
+
 typedef struct
 {
   int x;
@@ -337,13 +342,13 @@ const char *errCodeToCStr(int code)
     case 0:
       return NULL;
     case 1:
-      return "Out of memory";
+      return "out of memory";
     case 2:
       return "pthread_create failed";
     case 3:
       return "pthread_join deadlock detected";
     default:
-      return "Unknown error";
+      return "unknown error";
   }
 
 }
@@ -386,8 +391,8 @@ static void shadeImageChunk(MultiprocessInvocation *pInvoc)
     div_t d = div(i, size.x);
     shaderInvoc.y = d.quot;
     shaderInvoc.x = d.rem;
-    ++shaderInvoc.pOut;
     pInfo->shader(&shaderInvoc);
+    ++shaderInvoc.pOut;
   }
 }
 
@@ -416,7 +421,7 @@ static void transformShader(ShaderInvocation *pInvoc)
   {
     *pInvoc->pOut = pUniform->fill;
   }
-  if (pUniform->shouldInterpolate)
+  else if (pUniform->shouldInterpolate)
   {
     *pInvoc->pOut = getInterpolatedImageG8(pUniform->img, pos.x / imgSize.x, pos.y / imgSize.y);
   }
@@ -427,7 +432,7 @@ static void transformShader(ShaderInvocation *pInvoc)
 }
 
 const char *transform(
-  ImageG8 img,
+  ImageG8 image,
   Mat3 invTfm,
   Vec2i offset,
   uint8_t fill,
@@ -436,7 +441,7 @@ const char *transform(
   int threads
 ) {
   TransformUniform uniform = {
-    img,
+    image,
     invTfm,
     offset,
     fill,

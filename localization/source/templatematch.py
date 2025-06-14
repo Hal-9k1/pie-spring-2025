@@ -4,11 +4,11 @@ from localization.source import AbstractStaticObstacleLocalizationSource
 from matrix import Mat2
 from matrix import Mat3
 from matrix import Vec2
-from multiprocessing import Pool
 from resources.ImageG8_accel_c_build import ImageG8_accel_c
 from units import convert
 import ctypes
 import math
+import multiprocessing
 import os
 import os.path
 import subprocess
@@ -16,6 +16,10 @@ import subprocess
 
 class _Vec2iStruct(ctypes.Structure):
     _fields_ = [('x', ctypes.c_int), ('y', ctypes.c_int)]
+
+
+class _Mat3Struct(ctypes.Structure):
+    _fields_ = [('data', ctypes.c_double * 6)]
 
 
 class _ImageG8Struct(ctypes.Structure):
@@ -26,20 +30,53 @@ class ImageG8:
     GAUSSIAN_KERNELS = {}
     ACCEL_LIB = None
     ACCEL_LIB_FILENAME = 'encinal-2025-data/ImageG8-accel.so'
+    #ACCEL_LIB_BUILD_ARGS = ('gcc', '-shared', '-O0', '-ggdb')
+    ACCEL_LIB_BUILD_ARGS = ('gcc', '-shared', '-O3')
 
     def __init__(self, width, height, data=None):
         self.size = Vec2(width, height)
         self._data = array('B', data or [0] * width * height)
+        self._pins = []
+
+    def _test_accelerator(filename, should_build):
+        lib = ctypes.CDLL(filename)
+        try:
+            lib.getSourceHash
+        except AttributeError:
+            should_build.value = 1
+        else:
+            lib.getSourceHash.restype = ctypes.c_uint64
+            should_build.value = int(lib.getSourceHash() != hash(ImageG8_accel_c))
 
     @classmethod
     def load_accelerator(cls):
         try:
+            build_lib = False
             if not os.path.isfile(cls.ACCEL_LIB_FILENAME):
+                # Accelerator doesn't exist
+                build_lib = True
+            else:
+                test_output = multiprocessing.Value(ctypes.c_int, lock=False)
+                test_process = multiprocessing.Process(
+                    target=cls._test_accelerator,
+                    args=(cls.ACCEL_LIB_FILENAME, test_output)
+                )
+                test_process.start()
+                test_process.join()
+                build_lib = bool(test_output.value)
+
+            if build_lib:
                 src_fn = cls.ACCEL_LIB_FILENAME[:-2] + 'c'
                 os.makedirs(os.path.dirname(src_fn), exist_ok=True)
-                with open(src_fn, 'x') as f:
+                with open(src_fn, 'w') as f:
                     f.write(ImageG8_accel_c)
-                subprocess.run(['gcc', '-shared', '-O0', '-ggdb', '-o', cls.ACCEL_LIB_FILENAME, src_fn], check=True)
+                subprocess.run([
+                    *cls.ACCEL_LIB_BUILD_ARGS,
+                    f'-DSOURCE_HASH={hash((ImageG8_accel_c, cls.ACCEL_LIB_BUILD_ARGS))}',
+                    '-o', cls.ACCEL_LIB_FILENAME,
+                    src_fn
+                ], check=True)
+
             cls.ACCEL_LIB = ctypes.CDLL(cls.ACCEL_LIB_FILENAME)
             cls.ACCEL_LIB.templateMatch.restype = ctypes.c_char_p
             cls.ACCEL_LIB.templateMatch.argtypes = [
@@ -48,6 +85,23 @@ class ImageG8:
                 ctypes.POINTER(_ImageG8Struct), # pMask
                 _ImageG8Struct, # out
                 ctypes.c_int # threads
+            ]
+            cls.ACCEL_LIB.transform.restype = ctypes.c_char_p
+            cls.ACCEL_LIB.transform.argtypes = [
+                _ImageG8Struct, # image
+                _Mat3Struct, # invTfm
+                _Vec2iStruct, # offset
+                ctypes.c_uint8, # fill
+                ctypes.c_int, # shouldInterpolate
+                _ImageG8Struct, # result
+                ctypes.c_int # threads
+            ]
+            cls.ACCEL_LIB.convolve.restype = ctypes.c_char_p
+            cls.ACCEL_LIB.convolve.argtypes = [
+                _ImageG8Struct, # image
+                _ImageG8Struct, # kernel
+                _ImageG8Struct, # result
+                ctypes.c_int, # threads
             ]
         except Exception as e:
             raise RuntimeError('Failed to compile or load ImageG8 accelerator.') from e
@@ -109,7 +163,7 @@ class ImageG8:
                 return (self, kernel, userdata, buf, start, end)
             args = [to_args(i) for i in range(num_threads)]
             try:
-                pool = process_pool or Pool(num_threads)
+                pool = process_pool or multiprocessing.Pool(num_threads)
                 for chunk in pool.starmap(type(self)._draw_chunk, args):
                     self._data.extend(chunk)
             finally:
@@ -129,7 +183,7 @@ class ImageG8:
                 )
         return result
 
-    def paste(self, location, image, num_threads=1, process_pool=None):
+    def paste(self, location, image, *, num_threads=1, process_pool=None):
         total_px = image.size.x * image.size.y
         if num_threads == 1:
             result = array('B', [0] * total_px)
@@ -147,7 +201,7 @@ class ImageG8:
                 return (self, location, image, buf, start, end)
             args = [to_args(i) for i in range(num_threads)]
             try:
-                pool = process_pool or Pool(num_threads)
+                pool = process_pool or multiprocessing.Pool(num_threads)
                 for chunk in pool.starmap(type(self)._paste_chunk, args):
                     result.extend(chunk)
             finally:
@@ -184,6 +238,7 @@ class ImageG8:
     def template_match(
             self,
             template,
+            *,
             num_threads=1,
             process_pool=None,
             mask=None,
@@ -194,13 +249,17 @@ class ImageG8:
         if accelerate:
             if not self.ACCEL_LIB:
                 type(self).load_accelerator()
-            self.ACCEL_LIB.templateMatch(
+            msg = self.ACCEL_LIB.templateMatch(
                 self,
                 template,
                 mask and ctypes.pointer(mask._as_parameter_),
                 result,
                 num_threads
             )
+            if msg:
+                raise RuntimeError(
+                    'Encountered error in accelerated template_match: ' + msg.decode('ascii')
+                )
             return result
         total_px = result_width * result_height
         if num_threads == 1:
@@ -222,7 +281,7 @@ class ImageG8:
                 return (self, template, mask, buf, start, end)
             args = [to_args(i) for i in range(num_threads)]
             try:
-                pool = process_pool or Pool(num_threads)
+                pool = process_pool or multiprocessing.Pool(num_threads)
                 chunks = pool.starmap(type(self)._template_match_chunk, args)
                 l = min(pool.map(min, chunks))
                 r = 255 / max(1, max(pool.map(max, chunks)) - l)
@@ -259,9 +318,19 @@ class ImageG8:
             result[i - start] = int(max(0, min(255, v)))
         return result
 
-    def convolve(self, kernel, num_threads=1, process_pool=None):
+    def convolve(self, kernel, *, num_threads=1, process_pool=None, accelerate=True):
         result = type(self)(self.size.x, self.size.y)
+        result._pins = list(self._pins)
         total_px = self.size.x * self.size.y
+        if accelerate:
+            if not self.ACCEL_LIB:
+                type(self).load_accelerator()
+            msg = self.ACCEL_LIB.convolve(self, kernel, result, num_threads)
+            if msg:
+                raise RuntimeError(
+                    'Encountered error in accelerated convolve: ' + msg.decode('ascii')
+                )
+            return result
         if num_threads == 1:
             self._convolve_chunk(kernel, result._data, 0, total_px)
         else:
@@ -277,7 +346,7 @@ class ImageG8:
                 return (self, kernel, buf, start, end)
             args = [to_args(i) for i in range(num_threads)]
             try:
-                pool = process_pool or Pool(num_threads)
+                pool = process_pool or multiprocessing.Pool(num_threads)
                 for chunk in process_pool.starmap(type(self)._convolve_chunk, args):
                     result._data.extend(chunk)
             finally:
@@ -285,14 +354,22 @@ class ImageG8:
                     pool.terminate()
         return result
 
-    def square_blur(self, size, num_threads=1, process_pool=None):
+    def square_blur(self, size, *, num_threads=1, process_pool=None, accelerate=True):
         return self.convolve(
             type(self)(size, size, [int(128 / size**2 + 128)] * size**2),
             num_threads=num_threads,
-            process_pool=process_pool
+            process_pool=process_pool,
+            accelerate=accelerate
         )
 
-    def gaussian_blur(self, size, num_threads=1, process_pool=None, cache_kernel=True):
+    def gaussian_blur(
+            self,
+            size,
+            *,
+            num_threads=1,
+            process_pool=None,
+            cache_kernel=True,
+            accelerate=True):
         if size in self.GAUSSIAN_KERNELS:
             kernel = self.GAUSSIAN_KERNELS[size]
         else:
@@ -307,7 +384,8 @@ class ImageG8:
         return self.convolve(
             kernel,
             num_threads=num_threads,
-            process_pool=process_pool
+            process_pool=process_pool,
+            accelerate=accelerate,
         )
 
     def _gaussian_kernel_draw_kernel(x, y, userdata):
@@ -316,34 +394,109 @@ class ImageG8:
         y = size * (y - 0.5)
         return 128 * (1 + math.exp(-(x*x + y*y) / (2 * s2)) / (2 * math.pi * s2))
 
-    def rotate(self, angle, anchor, fill, num_threads=1, process_pool=None):
+    def add_pin(self, pos):
+        self._pins.append(pos)
+        return len(self._pins) - 1
+
+    def get_pin(self, idx):
+        return self._pins[idx]
+
+    def rotate(
+            self,
+            angle,
+            fill,
+            *,
+            anchor=Vec2.zero(),
+            num_threads=1,
+            process_pool=None,
+            accelerate=True):
         tfm = (
             Mat3.from_transform(Mat2.from_angle(angle), anchor)
             * Mat3.from_transform(Mat2.identity(), -anchor)
         )
-        return self._transform(tfm, fill, num_threads=num_threads, process_pool=process_pool)
+        return self._transform(
+            tfm,
+            fill,
+            num_threads=num_threads,
+            process_pool=process_pool,
+            accelerate=accelerate
+        )
 
-    def scale(self, factor, interpolate=True, num_threads=1, process_pool=None):
+    def scale(
+            self,
+            factor,
+            *,
+            interpolate=True,
+            num_threads=1,
+            process_pool=None,
+            accelerate=True):
         tfm = Mat3.from_transform(Mat2.identity() * factor, Vec2.zero())
         return self._transform(
             tfm,
-            0,
+            0, # Won't be used anyway
             interpolate=interpolate,
             num_threads=num_threads,
-            process_pool=process_pool
+            process_pool=process_pool,
+            accelerate=accelerate
         )
 
-    def _transform(self, tfm, fill, *, interpolate=True, num_threads=1, process_pool=None):
+    def translate(
+            self,
+            offset,
+            fill,
+            *,
+            interpolate=True,
+            num_threads=1,
+            process_pool=None,
+            accelerate=True):
+        tfm = Mat3.from_transform(Mat2.identity(), offset)
+        return self._transform(
+            tfm,
+            fill,
+            interpolate=interpolate,
+            num_threads=num_threads,
+            process_pool=process_pool,
+            accelerate=accelerate
+        )
+
+    def _transform(
+            self,
+            tfm,
+            fill,
+            *,
+            interpolate=True,
+            num_threads=1,
+            process_pool=None,
+            accelerate=True):
         corners = [
             tfm * (Vec2(x, y) * self.size)
             for x, y in [(0, 0), (1, 0), (0, 1), (1, 1)]
         ]
         xs = [corner.x for corner in corners]
         ys = [corner.y for corner in corners]
+        offset = Vec2(min(xs), min(ys))
         result_width = max(xs) - min(xs)
         result_height = max(ys) - min(ys)
-        offset_norm = Vec2(min(xs) / result_width, min(ys) / result_height)
         result = type(self)(int(result_width), int(result_height))
+        result._pins = [tfm * pin for pin in self._pins]
+        if accelerate:
+            if not self.ACCEL_LIB:
+                type(self).load_accelerator()
+            msg = self.ACCEL_LIB.transform(
+                self,
+                _Mat3Struct((ctypes.c_double * 6)(*tfm.inv()._mat[:6])),
+                _Vec2iStruct(int(min(xs)), int(min(ys))),
+                fill,
+                int(interpolate),
+                result,
+                num_threads
+            )
+            if msg:
+                raise RuntimeError(
+                    'Encountered error in accelerated template_match. ' + msg.decode('ascii')
+                )
+            return result
+        offset_norm = Vec2(min(xs) / result_width, min(ys) / result_height)
         result.draw(
             type(self)._draw_transformed_kernel,
             userdata=(
@@ -369,13 +522,29 @@ class ImageG8:
         get_func = self.get_norm if interpolate else self.get_norm_nearest
         return get_func(rx / self.size.x, ry / self.size.y)
 
+    def border(self, width_norm, color, num_threads=1, process_pool=None):
+        result = type(self)(self.size.x, self.size.y)
+        result._pins = list(self._pins)
+        result.draw(
+            type(self)._draw_border_kernel,
+            userdata=(0.5 - width_norm, color, self),
+            num_threads=num_threads,
+            process_pool=process_pool
+        )
+        return result
+
+    def _draw_border_kernel(x, y, userdata):
+        min_c_dist_norm, color, img = userdata
+        is_border = int(max(abs(0.5 - y), abs(0.5 - x)) > min_c_dist_norm)
+        return is_border * color + (1 - is_border) * img.get_norm(x, y)
+
 
 class TemplateMatchingLocalizationSource(AbstractStaticObstacleLocalizationSource):
     DETECTION_LIFETIME = 1
     PX_PER_M = 100
     FIELD_OUTLINE_RADIUS_PX = 6
     FIELD_BORDER_PX = 6
-    MAX_DETECTION_DIST_M = 0.1
+    MAX_DETECTION_DIST_M = 0.3
     DETECTION_RADIUS_PX = 2
     FIELD_DRAW_THREADS = 16
     DETECTION_DRAW_THREADS = 16
@@ -437,7 +606,7 @@ class TemplateMatchingLocalizationSource(AbstractStaticObstacleLocalizationSourc
         ]
         detection_rr = Vec2(self.DETECTION_RADIUS_PX, self.DETECTION_RADIUS_PX)
         match_results = []
-        with (Pool(self.TEMPLATE_MATCH_THREADS)
+        with (multiprocessing.Pool(self.TEMPLATE_MATCH_THREADS)
                 if self.TEMPLATE_MATCH_THREADS != 1
                 else nullcontext()) as pool:
             for point in points:
@@ -447,13 +616,17 @@ class TemplateMatchingLocalizationSource(AbstractStaticObstacleLocalizationSourc
                     num_threads=self.TEMPLATE_MATCH_THREADS,
                     process_pool=pool
                 )
+            template = template.border(0.05, 255)
+            anchor = Vec2(detection_dist_px, detection_dist_px)
+            pin = template.add_pin(anchor)
             for i in range(self.ROTATION_VARIANTS):
                 angle = 2 * math.pi * i / self.ROTATION_VARIANTS
+                print(i)
                 rotated = template.rotate(
                     angle,
-                    Vec2(detection_dist_px, detection_dist_px),
                     0,
-                    num_threads=self.TEMPLATE_MATCH_THREADS,
+                    anchor=anchor,
+                    num_threads=1,
                     process_pool=pool
                 )
                 match_results.append(rotated.scale(
@@ -466,8 +639,12 @@ class TemplateMatchingLocalizationSource(AbstractStaticObstacleLocalizationSourc
                     rotated,
                     mask=rotated,
                     num_threads=self.TEMPLATE_MATCH_THREADS,
-                    process_pool=pool,
-                    #accelerate=False
+                    process_pool=pool
+                ).translate(
+                    Vec2.zero(),#-rotated.get_pin(pin),
+                    255,
+                    num_threads=self.TEMPLATE_MATCH_THREADS,
+                    process_pool=pool
                 ))
         # get localization data from match_results
         return match_results

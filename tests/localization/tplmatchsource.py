@@ -46,7 +46,7 @@ def demo2():
 
 def demo3():
     src = TemplateMatchingLocalizationSource(field.spring_2025)
-    show(src._field_img.rotate(3 * pi / 4, Vec2(0, 0), 0, 8))
+    show(src._field_img.rotate(3 * pi / 4, 0, 8))
 
 def demo4():
     src = TemplateMatchingLocalizationSource(field.spring_2025)
@@ -96,6 +96,33 @@ def demo6():
 
 def demo7():
     template_match()
+
+def demo8_checker(x, y, div):
+    return int((x // div + y // div) % 2 * 255)
+def checker():
+    i = ImageG8(80, 40)
+    div = 0.1
+    i.draw(
+        demo8_checker,
+        userdata=div,
+        num_threads=16
+    )
+    return i
+def demo8(accelerate=True, show_accel=False, i=None):
+    if not i:
+        i = checker()
+    if not accelerate:
+        breakpoint()
+    r = i.rotate(math.pi / 4, 0, accelerate=accelerate)
+    if show_accel or not accelerate:
+        show(r.scale(12, interpolate=False))
+
+def demo9():
+    i = checker()
+    r1 = i.rotate(math.pi / 4, 0, accelerate=False).scale(12, interpolate=False)
+    r2 = i.rotate(math.pi / 4, 0, accelerate=True).scale(12, interpolate=False)
+    show(r1)
+    show(r2)
 
 def to_conf_path(name):
     return f'encinal-2025-data/{name}.pickle'
