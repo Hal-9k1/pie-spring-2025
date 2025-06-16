@@ -7,7 +7,7 @@ build_module := mainbuild
 build_name := $(build_module).py
 resource_builds := $(filter %build.py,$(wildcard resources/*))
 
-.PHONY: all test simauto simteleop simulate copy clean always_build
+.PHONY: all test simauto simteleop simulate copy clean
 all: $(build_name)
 
 test:
@@ -30,10 +30,12 @@ tpltest: resources/ImageG8_accel_c_build.py
 clean:
 	rm -rf Makefile.depends $(build_name) $(resource_builds) encinal-2025-data/
 
-# Not being able to conditionally disable this rule emits a warning when Makefile.depends already
-# exists since it contains its own rule. This also always rebuilds the deps file. GNU Make ftw!
-.INTERMEDIATE: Makefile.depends
+# Makefile.depends contains the rules to make $(build_name) and remake itself, if it exists
+ifeq (,$(wildcard Makefile.depends))
 Makefile.depends:
 	$(python) preprocessor.py main.py --dependency-file=Makefile.depends --build-file=$(build_name)
+endif
 
+ifeq (,$(call eq,clean,$(MAKECMDGOALS)))
 include Makefile.depends
+endif
