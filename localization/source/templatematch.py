@@ -243,8 +243,10 @@ class ImageG8:
             process_pool=None,
             mask=None,
             accelerate=True):
-        result_width = self.size.x - template.size.x
-        result_height = self.size.y - template.size.y
+        result_width = self.size.x
+        result_height = self.size.y
+        #result_width = self.size.x - template.size.x
+        #result_height = self.size.y - template.size.y
         result = ImageG8(result_width, result_height)
         if accelerate:
             if not self.ACCEL_LIB:
@@ -453,6 +455,7 @@ class ImageG8:
         return self._transform(
             tfm,
             fill,
+            fit_all=False,
             interpolate=interpolate,
             num_threads=num_threads,
             process_pool=process_pool,
@@ -465,6 +468,7 @@ class ImageG8:
             fill,
             *,
             interpolate=True,
+            fit_all=True,
             num_threads=1,
             process_pool=None,
             accelerate=True):
@@ -474,18 +478,18 @@ class ImageG8:
         ]
         xs = [corner.x for corner in corners]
         ys = [corner.y for corner in corners]
-        offset = Vec2(min(xs), min(ys))
+        offset = Vec2(min(xs), min(ys)) if fit_all else Vec2.zero()
         result_width = max(xs) - min(xs)
         result_height = max(ys) - min(ys)
         result = type(self)(int(result_width), int(result_height))
-        result._pins = [tfm * pin for pin in self._pins]
+        result._pins = [tfm * pin - offset for pin in self._pins]
         if accelerate:
             if not self.ACCEL_LIB:
                 type(self).load_accelerator()
             msg = self.ACCEL_LIB.transform(
                 self,
                 _Mat3Struct((ctypes.c_double * 6)(*tfm.inv()._mat[:6])),
-                _Vec2iStruct(int(min(xs)), int(min(ys))),
+                _Vec2iStruct(int(offset.x), int(offset.y)),
                 fill,
                 int(interpolate),
                 result,
@@ -496,7 +500,7 @@ class ImageG8:
                     'Encountered error in accelerated template_match. ' + msg.decode('ascii')
                 )
             return result
-        offset_norm = Vec2(min(xs) / result_width, min(ys) / result_height)
+        offset_norm = Vec2(offset.x / result_width, offset.y / result_height)
         result.draw(
             type(self)._draw_transformed_kernel,
             userdata=(
@@ -554,9 +558,10 @@ class TemplateMatchingLocalizationSource(AbstractStaticObstacleLocalizationSourc
     def __init__(self, field, field_img=None, detection_img=None):
         super().__init__(self.DETECTION_LIFETIME)
         self._size_m = field.get_size()
-        self._size_px = math.floor(self._size_m * self.PX_PER_M)
+        border_rr = Vec2(self.FIELD_BORDER_PX, self.FIELD_BORDER_PX)
+        self._size_px = math.floor(self._size_m * self.PX_PER_M) + border_rr * 2
         self._field_border_norm = (
-            Vec2(self.FIELD_BORDER_PX, self.FIELD_BORDER_PX) / self._size_px
+            border_rr / self._size_px
         )
         if (field_img
                 and field_img[0] == self.PX_PER_M
@@ -616,7 +621,7 @@ class TemplateMatchingLocalizationSource(AbstractStaticObstacleLocalizationSourc
                     num_threads=self.TEMPLATE_MATCH_THREADS,
                     process_pool=pool
                 )
-            template = template.border(0.05, 255)
+            bordered = template.border(0.05, 255, num_threads=16)
             anchor = Vec2(detection_dist_px, detection_dist_px)
             pin = template.add_pin(anchor)
             for i in range(self.ROTATION_VARIANTS):
@@ -629,19 +634,23 @@ class TemplateMatchingLocalizationSource(AbstractStaticObstacleLocalizationSourc
                     num_threads=1,
                     process_pool=pool
                 )
-                match_results.append(rotated.scale(
+                match_results.append(bordered.rotate(
+                    angle,
+                    0,
+                    anchor=anchor
+                ).scale(
                     16,
-                    interpolate=False,
-                    num_threads=self.TEMPLATE_MATCH_THREADS,
-                    process_pool=pool
+                    interpolate=False
                 ))
-                match_results.append(self._field_img.template_match(
+                match = self._field_img.template_match(
                     rotated,
                     mask=rotated,
                     num_threads=self.TEMPLATE_MATCH_THREADS,
                     process_pool=pool
-                ).translate(
-                    Vec2.zero(),#-rotated.get_pin(pin),
+                )
+                match_results.append(match)
+                match_results.append(match.translate(
+                    math.floor(rotated.get_pin(pin)),
                     255,
                     num_threads=self.TEMPLATE_MATCH_THREADS,
                     process_pool=pool

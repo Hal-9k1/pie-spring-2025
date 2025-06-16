@@ -80,17 +80,22 @@ static uint8_t getImageG8(ImageG8 img, int x, int y)
   return img.pData[img.size.x * y + x];
 }
 
+static uint8_t getImageG8Overflow(ImageG8 img, int x, int y, uint8_t overflow)
+{
+  return x < 0 || y < 0 || x >= img.size.x || y >= img.size.y ? overflow : getImageG8(img, x, y);
+}
+
 static double getInterpolatedImageG8(ImageG8 img, double x, double y)
 {
   double modfDummy;
-  double xClamped = clampd(x, 0, 1) * (img.size.x - 1);
+  double xClamped = clampd(x * img.size.x, 0, img.size.x - 1);
   double xFrac = modf(xClamped, &modfDummy);
   double xComp = 1 - xFrac;
   int xHighUnclamped = xClamped + 1;
   int xHigh = xHighUnclamped > img.size.x ? img.size.x : xHighUnclamped;
   int xLow = xClamped;
 
-  double yClamped = clampd(y, 0, 1) * (img.size.y - 1);
+  double yClamped = clampd(y * img.size.y, 0, img.size.y - 1);
   double yFrac = modf(yClamped, &modfDummy);
   double yComp = 1 - yFrac;
   int yHighUnclamped = yClamped + 1;
@@ -265,8 +270,8 @@ static void templateMatchChunk(MultiprocessInvocation *pInvoc)
     {
       for (int bx = 0; bx < pInfo->template.size.x; ++bx)
       {
-        int a = getImageG8(pInfo->image, ax + bx, ay + by);
         int b = getImageG8(pInfo->template, bx, by);
+        int a = getImageG8Overflow(pInfo->image, ax + bx, ay + by, b < 128 ? 255 : 0);
         int maskFac = pInfo->pMask ? getImageG8(*pInfo->pMask, bx, by) : 255;
         err += abs(a - b) * maskFac;
       }
