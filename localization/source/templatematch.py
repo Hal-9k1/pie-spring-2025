@@ -83,6 +83,7 @@ class ImageG8:
                 _ImageG8Struct, # image
                 _ImageG8Struct, # template
                 ctypes.POINTER(_ImageG8Struct), # pMask
+                _Vec2iStruct, # offset
                 _ImageG8Struct, # out
                 ctypes.c_int # threads
             ]
@@ -238,15 +239,14 @@ class ImageG8:
     def template_match(
             self,
             template,
+            offset,
             *,
             num_threads=1,
             process_pool=None,
             mask=None,
             accelerate=True):
-        result_width = self.size.x
-        result_height = self.size.y
-        #result_width = self.size.x - template.size.x
-        #result_height = self.size.y - template.size.y
+        result_width = self.size.x + template.size.x - offset.x
+        result_height = self.size.y + template.size.y - offset.y
         result = ImageG8(result_width, result_height)
         if accelerate:
             if not self.ACCEL_LIB:
@@ -255,6 +255,7 @@ class ImageG8:
                 self,
                 template,
                 mask and ctypes.pointer(mask._as_parameter_),
+                _Vec2iStruct(offset.x, offset.y),
                 result,
                 num_threads
             )
@@ -642,15 +643,17 @@ class TemplateMatchingLocalizationSource(AbstractStaticObstacleLocalizationSourc
                     16,
                     interpolate=False
                 ))
+                pin_pos = math.floor(rotated.get_pin(pin))
                 match = self._field_img.template_match(
                     rotated,
+                    pin_pos,
                     mask=rotated,
                     num_threads=self.TEMPLATE_MATCH_THREADS,
                     process_pool=pool
                 )
                 match_results.append(match)
                 match_results.append(match.translate(
-                    math.floor(rotated.get_pin(pin)),
+                    pin_pos,
                     255,
                     num_threads=self.TEMPLATE_MATCH_THREADS,
                     process_pool=pool

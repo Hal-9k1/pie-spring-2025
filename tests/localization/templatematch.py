@@ -29,6 +29,75 @@ def show(img: ImageG8):
     except KeyboardInterrupt:
         _hold.discard(img)
 
+def to_conf_path(name):
+    return f'encinal-2025-data/{name}.pickle'
+
+def loadconf(name):
+    try:
+        with open(to_conf_path(name), 'rb') as f:
+            return pickle.load(f)
+    except (OSError, pickle.PickleError):
+        return None
+
+def saveconf(name, obj):
+    path = to_conf_path(name)
+    try:
+        os.makedirs(os.path.dirname(path), exist_ok=True)
+        with open(path, 'wb') as f:
+            pickle.dump(obj, f, protocol=-1)
+    except (OSError, pickle.PickleError):
+        pass
+
+def saveconfs():
+    src = TemplateMatchingLocalizationSource(field.spring_2025)
+    with Pool(16) as pool:
+        for i in range(4, 16):
+            ImageG8(1, 1).gaussian_blur(i, num_threads=16, process_pool=pool)
+    saveconf('field_img', src.get_field_image())
+    saveconf('detection_img', src.get_detection_image())
+    saveconf('gaussian_kernels', ImageG8.GAUSSIAN_KERNELS)
+
+def checker_shader(x, y, div):
+    return int((x // div + y // div) % 2 * 255)
+
+def checker():
+    i = ImageG8(80, 40)
+    div = 0.1
+    i.draw(
+        checker_shader,
+        userdata=div,
+        num_threads=16
+    )
+    return i
+
+def circle_shader(x, y):
+    return 255 * (math.sqrt((x - 0.5)**2 + (y - 0.5)**2) < 0.5)
+
+def circle(r):
+    i = ImageG8(r * 2, r * 2)
+    i.draw(circle_shader, num_threads=16)
+    return i
+
+def rect(x, y):
+    return ImageG8(x, y, [255] * x * y)
+
+def clip_shader(x, y, userdata):
+    img, x0, y0, x1, y1 = userdata
+    return img.get_norm(
+        (x0 + x * (x1 - x0)) / img.size.x,
+        (y0 + y * (y1 - y0)) / img.size.y
+    )
+
+def clip(img, x0, y0, x1, y1):
+    i = ImageG8(x1 - x0, y1 - y0)
+    i.draw(
+        clip_shader,
+        userdata=(img, x0, y0, x1, y1),
+        num_threads=16
+    )
+    return i
+
+
 def demo1():
     i = ImageG8(400, 200)
     div = 0.1
@@ -97,17 +166,6 @@ def demo6():
 def demo7():
     template_match()
 
-def demo8_checker(x, y, div):
-    return int((x // div + y // div) % 2 * 255)
-def checker():
-    i = ImageG8(80, 40)
-    div = 0.1
-    i.draw(
-        demo8_checker,
-        userdata=div,
-        num_threads=16
-    )
-    return i
 def demo8(accelerate=True, show_accel=False, i=None):
     if not i:
         i = checker()
@@ -124,34 +182,19 @@ def demo9():
     show(r1)
     show(r2)
 
-def to_conf_path(name):
-    return f'encinal-2025-data/{name}.pickle'
-
-def loadconf(name):
-    try:
-        with open(to_conf_path(name), 'rb') as f:
-            return pickle.load(f)
-    except (OSError, pickle.PickleError):
-        return None
-
-def saveconf(name, obj):
-    path = to_conf_path(name)
-    try:
-        os.makedirs(os.path.dirname(path), exist_ok=True)
-        with open(path, 'wb') as f:
-            pickle.dump(obj, f, protocol=-1)
-    except (OSError, pickle.PickleError):
-        pass
-
-def saveconfs():
-    src = TemplateMatchingLocalizationSource(field.spring_2025)
-    with Pool(16) as pool:
-        for i in range(4, 16):
-            ImageG8(1, 1).gaussian_blur(i, num_threads=16, process_pool=pool)
-    saveconf('field_img', src.get_field_image())
-    saveconf('detection_img', src.get_detection_image())
-    saveconf('gaussian_kernels', ImageG8.GAUSSIAN_KERNELS)
+def demo10():
+    scene = ImageG8(400, 400)
+    scene.paste(Vec2(100, 100), rect(250, 100))
+    r = 20
+    scene.paste(Vec2(350 - r, 200 - r), circle(r))
+    c = clip(scene, 300, 150, 400, 250)
+    scene.paste(Vec2(-50, 150), c)
+    match = scene.template_match(c, Vec2(-50, -50))
+    while True:
+        show(scene)
+        show(c)
+        show(match)
 
 if __name__ == '__main__':
     #saveconfs()
-    demo5()
+    demo10()

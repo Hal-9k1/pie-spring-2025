@@ -254,6 +254,7 @@ typedef struct
   ImageG8 *pMask;
   Vec2i resultSize;
   double errScalingFac;
+  Vec2i offset;
   uint32_t *pBuf;
 } TemplateMatchInfo;
 
@@ -263,8 +264,8 @@ static void templateMatchChunk(MultiprocessInvocation *pInvoc)
   for (int i = pInvoc->start; i < pInvoc->end; ++i)
   {
     div_t imageCoords = div(i, pInfo->resultSize.x);
-    int ay = imageCoords.quot;
-    int ax = imageCoords.rem;
+    int ay = imageCoords.quot + pInfo->offset.y;
+    int ax = imageCoords.rem + pInfo->offset.x;
     long err = 0;
     for (int by = 0; by < pInfo->template.size.y; ++by)
     {
@@ -284,6 +285,7 @@ static int templateMatchImpl(
   ImageG8 image,
   ImageG8 template,
   ImageG8 *pMask,
+  Vec2i offset,
   ImageG8 out,
   int threads
 ) {
@@ -304,6 +306,7 @@ static int templateMatchImpl(
     // Divide by 255 to scale 0-255 difference to 1
     // Multiply by 2**32 to bring range into uint32_t range
     1.0 / (template.size.x * template.size.y) / 2 / 255 / 255 * (1L << 32),
+    offset,
     pBuf
   };
   int err = multiprocess(templateMatchChunk, totalPx, threads, &templateInfo);
@@ -362,10 +365,11 @@ const char *templateMatch(
   ImageG8 image,
   ImageG8 template,
   ImageG8 *pMask,
+  Vec2i offset,
   ImageG8 out,
   int threads
 ) {
-  return errCodeToCStr(templateMatchImpl(image, template, pMask, out, threads));
+  return errCodeToCStr(templateMatchImpl(image, template, pMask, offset, out, threads));
 }
 
 typedef struct
