@@ -54,14 +54,14 @@ class TestMat2(TestCase):
         self.assertFalse(Mat2(1, 1, 1, 1).mul(nan).is_finite())
 
     def test_mul_type(self):
-        with self.assertRaises(ValueError):
-            Mat2(1, 1, 1, 1).mul(None)
-        with self.assertRaises(ValueError):
-            Mat2(1, 1, 1, 1).mul('foobar')
-        with self.assertRaises(ValueError):
-            Mat2(1, 1, 1, 1).mul(Vec3.zero())
-        with self.assertRaises(ValueError):
-            Mat2(1, 1, 1, 1).mul(Mat3.identity())
+        with self.assertRaises(TypeError):
+            Mat2(1, 1, 1, 1) * None
+        with self.assertRaises(TypeError):
+            Mat2(1, 1, 1, 1) * 'foobar'
+        with self.assertRaises(TypeError):
+            Mat2(1, 1, 1, 1) * Vec3.zero()
+        with self.assertRaises(TypeError):
+            Mat2(1, 1, 1, 1) * Mat3.identity()
 
     def test_det(self):
         self.assertEqual(
@@ -169,12 +169,12 @@ class TestMat3(TestCase):
         self.assertFalse(Mat3(*range(9)).mul(nan).is_finite())
 
     def test_mul_type(self):
-        with self.assertRaises(ValueError):
-            Mat3(*range(9)).mul(None)
-        with self.assertRaises(ValueError):
-            Mat3(*range(9)).mul('foobar')
-        with self.assertRaises(ValueError):
-            Mat3(*range(9)).mul(Mat2.identity())
+        with self.assertRaises(TypeError):
+            Mat3(*range(9)) * None
+        with self.assertRaises(TypeError):
+            Mat3(*range(9)) * 'foobar'
+        with self.assertRaises(TypeError):
+            Mat3(*range(9)) * Mat2.identity()
 
     def test_det(self):
         self.assertEqual(
